@@ -1,28 +1,38 @@
-\# SHOPDB2 Front/Back Project
+# SHOPDB2 프로젝트
 
+React, FastAPI, MySQL을 사용하는 3인 팀 쇼핑몰 프로젝트입니다.
 
+## 공통 개발환경
 
-3인 팀 쇼핑몰 통합 프로젝트
+- Frontend: React + Vite
+- Backend: FastAPI
+- Database: MySQL 8
+- Python: 3.13
+- Node.js: 24.x
+- Backend 포트: 8000
+- Frontend 포트: 5173
+- API prefix: `/api`
 
+## 프로젝트 구조
 
-
-\## 구성
-
-\- Frontend: React
-
-\- Backend: FastAPI
-
-\- Database: MySQL
-
-\- AI/RAG: OpenAI / Gemini / Ollama
-
-
-
-\## 팀 기능 분담
-
-\- 구매자 / 주문 / 결제 / 환불
-
-\- 판매자 / 상품 / 옵션 / 재고
-
-\- 관리자 / 본사·지사 / AI
-
+```text
+shopdb2-project
+├─ backend
+│  ├─ app
+│  │  ├─ core
+│  │  │  ├─ config.py
+│  │  │  └─ database.py
+│  │  └─ main.py
+│  ├─ .env.example
+│  ├─ pyproject.toml
+│  └─ uv.lock
+├─ frontend
+│  ├─ src
+│  │  ├─ App.jsx
+│  │  ├─ App.css
+│  │  └─ main.jsx
+│  ├─ package.json
+│  └─ package-lock.json
+├─ database
+│  └─ shopdb2_schema_data.sql
+└─ docs
