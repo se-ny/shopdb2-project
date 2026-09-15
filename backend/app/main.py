@@ -2,13 +2,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import check_database_connection
-
+from app.routers.products import router as products_router
 
 app = FastAPI(
     title="SHOPDB2 API",
     description="SHOPDB2 공통 FastAPI 백엔드",
     version="0.1.0",
 )
+
+app.include_router(products_router)
 
 
 app.add_middleware(

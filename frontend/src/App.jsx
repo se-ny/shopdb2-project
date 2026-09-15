@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import ProductList from "./components/ProductList";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
@@ -129,9 +130,9 @@ function App() {
             <p>회원, 조직, 권한, 정책, AI/RAG 관리</p>
           </article>
         </div>
-      </section>
+           </section>
+
+      <ProductList />
     </main>
   );
 }
-
-export default App;
