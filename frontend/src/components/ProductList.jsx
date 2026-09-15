@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ProductDetail from "./ProductDetail";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
@@ -6,7 +7,8 @@ function ProductList() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-
+  const [selectedProductId, setSelectedProductId] = useState(null);
+  
   useEffect(() => {
     async function loadProducts() {
       try {
@@ -36,6 +38,15 @@ function ProductList() {
     return <p className="error-message">{errorMessage}</p>;
   }
 
+  if (selectedProductId !== null) {
+  return (
+    <ProductDetail
+      productId={selectedProductId}
+      onClose={() => setSelectedProductId(null)}
+    />
+  );
+}
+
   return (
     <section className="product-section">
       <h2>판매 중 상품</h2>
@@ -43,7 +54,11 @@ function ProductList() {
 
       <div className="product-grid">
         {products.map((product) => (
-          <article className="product-card" key={product.product_id}>
+          <article
+  className="product-card"
+  key={product.product_id}
+  onClick={() => setSelectedProductId(product.product_id)}
+>
             <p className="product-category">{product.category_name}</p>
 
             <h3>{product.product_name}</h3>
