@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import check_database_connection
+from app.routers.products import router as products_router
+from app.routers.seller_products import router as seller_products_router
 
 
 app = FastAPI(
@@ -9,6 +11,13 @@ app = FastAPI(
     description="SHOPDB2 공통 FastAPI 백엔드",
     version="0.1.0",
 )
+
+
+# 구매자 상품 조회 API
+app.include_router(products_router)
+
+# 판매자 상품/옵션/재고 관리 API
+app.include_router(seller_products_router)
 
 
 app.add_middleware(
