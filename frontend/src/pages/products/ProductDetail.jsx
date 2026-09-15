@@ -3,6 +3,7 @@ import {
   getProduct,
   getProductInventory,
   getProductVariants,
+  updateProductInventory,
 } from "../../api/products";
 import "../../styles/product.css";
 
@@ -20,8 +21,11 @@ export default function ProductDetail({ productId }) {
   const [product, setProduct] = useState(null);
   const [variants, setVariants] = useState([]);
   const [inventory, setInventory] = useState([]);
+  const [inventoryDrafts, setInventoryDrafts] = useState({});
   const [loading, setLoading] = useState(true);
+  const [savingInventoryId, setSavingInventoryId] = useState(null);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (!productId) {
@@ -34,6 +38,7 @@ export default function ProductDetail({ productId }) {
       try {
         setLoading(true);
         setError("");
+        setMessage("");
 
         const [productData, variantData, inventoryData] =
           await Promise.all([
@@ -45,9 +50,20 @@ export default function ProductDetail({ productId }) {
         setProduct(productData);
         setVariants(variantData);
         setInventory(inventoryData);
+
+        const drafts = {};
+
+        inventoryData.forEach((item) => {
+          drafts[item.inventory_id] = {
+            stock_quantity: item.stock_quantity,
+            safety_stock: item.safety_stock,
+          };
+        });
+
+        setInventoryDrafts(drafts);
       } catch (err) {
         setError(
-          err.message || "상품 상세 정보를 불러오지 못했습니다."
+          err.message || "상품 상세 정보를 불러오지 못했습니다.",
         );
       } finally {
         setLoading(false);
@@ -56,6 +72,59 @@ export default function ProductDetail({ productId }) {
 
     loadProductDetail();
   }, [productId]);
+
+  function handleInventoryChange(inventoryId, field, value) {
+    setInventoryDrafts((current) => ({
+      ...current,
+      [inventoryId]: {
+        ...current[inventoryId],
+        [field]: value,
+      },
+    }));
+  }
+
+  async function handleInventorySave(item) {
+    try {
+      setSavingInventoryId(item.inventory_id);
+      setError("");
+      setMessage("");
+
+      const draft = inventoryDrafts[item.inventory_id];
+
+      const updated = await updateProductInventory(
+        productId,
+        item.inventory_id,
+        {
+          stock_quantity: Number(draft.stock_quantity),
+          safety_stock: Number(draft.safety_stock),
+        },
+      );
+
+      setInventory((current) =>
+        current.map((inventoryItem) =>
+          inventoryItem.inventory_id === item.inventory_id
+            ? updated
+            : inventoryItem,
+        ),
+      );
+
+      setInventoryDrafts((current) => ({
+        ...current,
+        [item.inventory_id]: {
+          stock_quantity: updated.stock_quantity,
+          safety_stock: updated.safety_stock,
+        },
+      }));
+
+      setMessage(
+        `재고가 수정되었습니다. (${updated.org_name})`,
+      );
+    } catch (err) {
+      setError(err.message || "재고 수정에 실패했습니다.");
+    } finally {
+      setSavingInventoryId(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -67,7 +136,7 @@ export default function ProductDetail({ productId }) {
     );
   }
 
-  if (error) {
+  if (error && !product) {
     return (
       <section className="product-page">
         <p className="product-state product-state--error">
@@ -116,9 +185,7 @@ export default function ProductDetail({ productId }) {
 
           <h1>{product.product_name}</h1>
 
-          <p>
-            상품코드: {product.product_code}
-          </p>
+          <p>상품코드: {product.product_code}</p>
 
           <p>
             판매자: {product.seller_name || "정보 없음"}
@@ -183,9 +250,7 @@ export default function ProductDetail({ productId }) {
                   {formatPrice(variant.additional_price)}
                 </p>
 
-                <p>
-                  상태: {variant.active_yn}
-                </p>
+                <p>상태: {variant.active_yn}</p>
               </div>
             ))}
           </div>
@@ -193,7 +258,19 @@ export default function ProductDetail({ productId }) {
       </div>
 
       <div>
-        <h2>재고 정보</h2>
+        <h2>재고 관리</h2>
+
+        {error && (
+          <p className="product-state product-state--error">
+            {error}
+          </p>
+        )}
+
+        {message && (
+          <p className="product-state">
+            {message}
+          </p>
+        )}
 
         {inventory.length === 0 ? (
           <p className="product-state">
@@ -201,31 +278,73 @@ export default function ProductDetail({ productId }) {
           </p>
         ) : (
           <div>
-            {inventory.map((item) => (
-              <div key={item.inventory_id}>
-                <p>{item.org_name}</p>
+            {inventory.map((item) => {
+              const draft = inventoryDrafts[item.inventory_id] || {
+                stock_quantity: item.stock_quantity,
+                safety_stock: item.safety_stock,
+              };
 
-                <p>
-                  SKU: {item.variant_id}
-                </p>
+              return (
+                <div key={item.inventory_id}>
+                  <p>{item.org_name}</p>
 
-                <p>
-                  재고: {item.stock_quantity}
-                </p>
+                  <p>SKU: {item.variant_id}</p>
 
-                <p>
-                  예약: {item.reserved_quantity}
-                </p>
+                  <label>
+                    재고 수량
+                    <input
+                      type="number"
+                      min="0"
+                      value={draft.stock_quantity}
+                      onChange={(event) =>
+                        handleInventoryChange(
+                          item.inventory_id,
+                          "stock_quantity",
+                          event.target.value,
+                        )
+                      }
+                    />
+                  </label>
 
-                <p>
-                  안전재고: {item.safety_stock}
-                </p>
+                  <label>
+                    안전재고
+                    <input
+                      type="number"
+                      min="0"
+                      value={draft.safety_stock}
+                      onChange={(event) =>
+                        handleInventoryChange(
+                          item.inventory_id,
+                          "safety_stock",
+                          event.target.value,
+                        )
+                      }
+                    />
+                  </label>
 
-                <strong>
-                  판매 가능 수량: {item.available_quantity}
-                </strong>
-              </div>
-            ))}
+                  <p>
+                    예약: {item.reserved_quantity}
+                  </p>
+
+                  <p>
+                    현재 판매 가능 수량:{" "}
+                    {item.available_quantity}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => handleInventorySave(item)}
+                    disabled={
+                      savingInventoryId === item.inventory_id
+                    }
+                  >
+                    {savingInventoryId === item.inventory_id
+                      ? "저장 중..."
+                      : "재고 저장"}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

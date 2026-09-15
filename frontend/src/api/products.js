@@ -86,3 +86,17 @@ export function deleteProductVariant(productId, variantId) {
 export function getProductInventory(productId) {
   return request(`/products/${productId}/inventory`);
 }
+
+export function updateProductInventory(
+  productId,
+  inventoryId,
+  inventory,
+) {
+  return request(
+    `/products/${productId}/inventory/${inventoryId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(inventory),
+    },
+  );
+}

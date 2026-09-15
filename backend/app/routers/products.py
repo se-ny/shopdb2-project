@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.database import engine
 from app.schemas.product import (
     InventoryOut,
+    InventoryUpdate,
     ProductCreate,
     ProductOut,
     ProductUpdate,
@@ -24,6 +25,7 @@ router = APIRouter(
 
 def get_db() -> Generator[Session, None, None]:
     db = Session(engine)
+
     try:
         yield db
     finally:
@@ -100,6 +102,7 @@ def get_products(
     db: Session = Depends(get_db),
 ):
     where = ["1 = 1"]
+
     params = {
         "skip": skip,
         "limit": limit,
@@ -141,7 +144,10 @@ def get_product(
     db: Session = Depends(get_db),
 ):
     row = db.execute(
-        text(PRODUCT_SELECT + " WHERE p.product_id = :product_id"),
+        text(
+            PRODUCT_SELECT
+            + " WHERE p.product_id = :product_id"
+        ),
         {"product_id": product_id},
     ).first()
 
@@ -240,6 +246,7 @@ def create_product(
 
     except Exception as exc:
         db.rollback()
+
         raise HTTPException(
             status_code=400,
             detail=f"상품 등록 실패: {exc}",
@@ -313,7 +320,9 @@ def update_product(
             )
 
     fields = []
-    params = {"product_id": product_id}
+    params = {
+        "product_id": product_id,
+    }
 
     for key, value in data.items():
         fields.append(f"{key} = :{key}")
@@ -335,6 +344,7 @@ def update_product(
 
     except Exception as exc:
         db.rollback()
+
         raise HTTPException(
             status_code=400,
             detail=f"상품 수정 실패: {exc}",
@@ -502,6 +512,7 @@ def create_variant(
 
     except Exception as exc:
         db.rollback()
+
         raise HTTPException(
             status_code=400,
             detail=f"옵션 등록 실패: {exc}",
@@ -549,10 +560,14 @@ def update_variant(
 
     if not data:
         row = _get_variant(variant_id, db)
+
         return VariantOut(**dict(row))
 
     fields = []
-    params = {"variant_id": variant_id}
+    params = {
+        "variant_id": variant_id,
+        "product_id": product_id,
+    }
 
     for key, value in data.items():
         fields.append(f"{key} = :{key}")
@@ -568,16 +583,14 @@ def update_variant(
                   AND product_id = :product_id
                 """
             ),
-            {
-                **params,
-                "product_id": product_id,
-            },
+            params,
         )
 
         db.commit()
 
     except Exception as exc:
         db.rollback()
+
         raise HTTPException(
             status_code=400,
             detail=f"옵션 수정 실패: {exc}",
@@ -683,3 +696,119 @@ def get_inventory(
         InventoryOut(**dict(row._mapping))
         for row in rows
     ]
+
+
+@router.put(
+    "/{product_id}/inventory/{inventory_id}",
+    response_model=InventoryOut,
+)
+def update_inventory(
+    product_id: int,
+    inventory_id: int,
+    payload: InventoryUpdate,
+    db: Session = Depends(get_db),
+):
+    current = db.execute(
+        text(
+            """
+            SELECT
+                i.inventory_id,
+                i.org_id,
+                ou.org_name,
+                i.variant_id,
+                i.stock_quantity,
+                i.reserved_quantity,
+                i.safety_stock
+            FROM inventories i
+            JOIN org_units ou
+                ON i.org_id = ou.org_id
+            JOIN product_variants pv
+                ON i.variant_id = pv.variant_id
+            WHERE i.inventory_id = :inventory_id
+              AND pv.product_id = :product_id
+            """
+        ),
+        {
+            "inventory_id": inventory_id,
+            "product_id": product_id,
+        },
+    ).mappings().first()
+
+    if current is None:
+        raise HTTPException(
+            status_code=404,
+            detail="해당 상품의 재고를 찾을 수 없습니다.",
+        )
+
+    data = payload.model_dump(exclude_unset=True)
+
+    if not data:
+        return InventoryOut(
+            **current,
+            available_quantity=(
+                current["stock_quantity"]
+                - current["reserved_quantity"]
+            ),
+        )
+
+    fields = []
+    params = {
+        "inventory_id": inventory_id,
+    }
+
+    for key, value in data.items():
+        fields.append(f"{key} = :{key}")
+        params[key] = value
+
+    try:
+        db.execute(
+            text(
+                f"""
+                UPDATE inventories
+                SET {", ".join(fields)}
+                WHERE inventory_id = :inventory_id
+                """
+            ),
+            params,
+        )
+
+        db.commit()
+
+    except Exception as exc:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=400,
+            detail=f"재고 수정 실패: {exc}",
+        ) from exc
+
+    row = db.execute(
+        text(
+            """
+            SELECT
+                i.inventory_id,
+                i.org_id,
+                ou.org_name,
+                i.variant_id,
+                i.stock_quantity,
+                i.reserved_quantity,
+                i.safety_stock,
+                (
+                    i.stock_quantity - i.reserved_quantity
+                ) AS available_quantity
+            FROM inventories i
+            JOIN org_units ou
+                ON i.org_id = ou.org_id
+            JOIN product_variants pv
+                ON i.variant_id = pv.variant_id
+            WHERE i.inventory_id = :inventory_id
+              AND pv.product_id = :product_id
+            """
+        ),
+        {
+            "inventory_id": inventory_id,
+            "product_id": product_id,
+        },
+    ).mappings().first()
+
+    return InventoryOut(**dict(row))

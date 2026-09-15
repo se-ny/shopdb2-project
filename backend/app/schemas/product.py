@@ -82,6 +82,17 @@ class VariantOut(VariantCreate):
     active_yn: str = "Y"
 
 
+class InventoryUpdate(BaseModel):
+    stock_quantity: Optional[int] = Field(
+        default=None,
+        ge=0,
+    )
+    safety_stock: Optional[int] = Field(
+        default=None,
+        ge=0,
+    )
+
+
 class InventoryOut(BaseModel):
     inventory_id: int
     org_id: int
