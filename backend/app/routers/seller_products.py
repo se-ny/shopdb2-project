@@ -18,7 +18,7 @@ from app.schemas.product import (
 
 
 router = APIRouter(
-    prefix="/api/products",
+    prefix="/api/seller/products",
     tags=["상품/판매"],
 )
 
