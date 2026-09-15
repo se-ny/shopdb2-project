@@ -4,6 +4,8 @@ import {
   getProductInventory,
   getProductVariants,
   updateProductInventory,
+  updateProductVariant,
+  deleteProductVariant,
 } from "../../api/products";
 import "../../styles/product.css";
 
@@ -22,8 +24,11 @@ export default function ProductDetail({ productId }) {
   const [variants, setVariants] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [inventoryDrafts, setInventoryDrafts] = useState({});
+  const [variantDrafts, setVariantDrafts] = useState({});
   const [loading, setLoading] = useState(true);
   const [savingInventoryId, setSavingInventoryId] = useState(null);
+  const [savingVariantId, setSavingVariantId] = useState(null);
+  const [deletingVariantId, setDeletingVariantId] = useState(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -51,16 +56,32 @@ export default function ProductDetail({ productId }) {
         setVariants(variantData);
         setInventory(inventoryData);
 
-        const drafts = {};
+        const inventoryDraftData = {};
 
         inventoryData.forEach((item) => {
-          drafts[item.inventory_id] = {
+          inventoryDraftData[item.inventory_id] = {
             stock_quantity: item.stock_quantity,
             safety_stock: item.safety_stock,
           };
         });
 
-        setInventoryDrafts(drafts);
+        setInventoryDrafts(inventoryDraftData);
+
+        const variantDraftData = {};
+
+        variantData.forEach((variant) => {
+          variantDraftData[variant.variant_id] = {
+            sku_code: variant.sku_code,
+            option_name1: variant.option_name1 || "",
+            option_value1: variant.option_value1 || "",
+            option_name2: variant.option_name2 || "",
+            option_value2: variant.option_value2 || "",
+            additional_price: variant.additional_price,
+            active_yn: variant.active_yn,
+          };
+        });
+
+        setVariantDrafts(variantDraftData);
       } catch (err) {
         setError(
           err.message || "상품 상세 정보를 불러오지 못했습니다.",
@@ -123,6 +144,108 @@ export default function ProductDetail({ productId }) {
       setError(err.message || "재고 수정에 실패했습니다.");
     } finally {
       setSavingInventoryId(null);
+    }
+  }
+
+  function handleVariantChange(variantId, field, value) {
+    setVariantDrafts((current) => ({
+      ...current,
+      [variantId]: {
+        ...current[variantId],
+        [field]: value,
+      },
+    }));
+  }
+
+  async function handleVariantSave(variant) {
+    try {
+      setSavingVariantId(variant.variant_id);
+      setError("");
+      setMessage("");
+
+      const draft = variantDrafts[variant.variant_id];
+
+      const updated = await updateProductVariant(
+        productId,
+        variant.variant_id,
+        {
+          sku_code: draft.sku_code,
+          option_name1: draft.option_name1 || null,
+          option_value1: draft.option_value1 || null,
+          option_name2: draft.option_name2 || null,
+          option_value2: draft.option_value2 || null,
+          additional_price: Number(draft.additional_price),
+          active_yn: draft.active_yn,
+        },
+      );
+
+      setVariants((current) =>
+        current.map((currentVariant) =>
+          currentVariant.variant_id === variant.variant_id
+            ? updated
+            : currentVariant,
+        ),
+      );
+
+      setVariantDrafts((current) => ({
+        ...current,
+        [variant.variant_id]: {
+          sku_code: updated.sku_code,
+          option_name1: updated.option_name1 || "",
+          option_value1: updated.option_value1 || "",
+          option_name2: updated.option_name2 || "",
+          option_value2: updated.option_value2 || "",
+          additional_price: updated.additional_price,
+          active_yn: updated.active_yn,
+        },
+      }));
+
+      setMessage(
+        `옵션이 수정되었습니다. (${updated.sku_code})`,
+      );
+    } catch (err) {
+      setError(err.message || "옵션 수정에 실패했습니다.");
+    } finally {
+      setSavingVariantId(null);
+    }
+  }
+
+  async function handleVariantDelete(variant) {
+    try {
+      setDeletingVariantId(variant.variant_id);
+      setError("");
+      setMessage("");
+
+      const updated = await deleteProductVariant(
+        productId,
+        variant.variant_id,
+      );
+
+      setVariants((current) =>
+        current.map((currentVariant) =>
+          currentVariant.variant_id === variant.variant_id
+            ? updated
+            : currentVariant,
+        ),
+      );
+
+      setVariantDrafts((current) => ({
+        ...current,
+        [variant.variant_id]: {
+          ...current[variant.variant_id],
+          active_yn: updated.active_yn,
+        },
+      }));
+
+      setMessage(
+        `옵션이 비활성화되었습니다. (${updated.sku_code})`,
+      );
+    } catch (err) {
+      setError(
+        err.message || "옵션 비활성화에 실패했습니다.",
+      );
+    } finally {
+      setDeletingVariantId(null);
     }
   }
 
@@ -218,8 +341,24 @@ export default function ProductDetail({ productId }) {
         </div>
       </div>
 
+      {(error || message) && (
+        <div>
+          {error && (
+            <p className="product-state product-state--error">
+              {error}
+            </p>
+          )}
+
+          {message && (
+            <p className="product-state">
+              {message}
+            </p>
+          )}
+        </div>
+      )}
+
       <div>
-        <h2>상품 옵션</h2>
+        <h2>상품 옵션 관리</h2>
 
         {variants.length === 0 ? (
           <p className="product-state">
@@ -227,50 +366,160 @@ export default function ProductDetail({ productId }) {
           </p>
         ) : (
           <div>
-            {variants.map((variant) => (
-              <div key={variant.variant_id}>
-                <strong>{variant.sku_code}</strong>
+            {variants.map((variant) => {
+              const draft = variantDrafts[variant.variant_id] || {
+                sku_code: variant.sku_code,
+                option_name1: variant.option_name1 || "",
+                option_value1: variant.option_value1 || "",
+                option_name2: variant.option_name2 || "",
+                option_value2: variant.option_value2 || "",
+                additional_price: variant.additional_price,
+                active_yn: variant.active_yn,
+              };
 
-                <p>
-                  {variant.option_name1 &&
-                    `${variant.option_name1}: `}
-                  {variant.option_value1 || ""}
+              return (
+                <div key={variant.variant_id}>
+                  <label>
+                    SKU 코드
+                    <input
+                      type="text"
+                      value={draft.sku_code}
+                      onChange={(event) =>
+                        handleVariantChange(
+                          variant.variant_id,
+                          "sku_code",
+                          event.target.value,
+                        )
+                      }
+                    />
+                  </label>
 
-                  {variant.option_name2 && (
-                    <>
-                      {" / "}
-                      {variant.option_name2}:{" "}
-                      {variant.option_value2 || ""}
-                    </>
-                  )}
-                </p>
+                  <label>
+                    옵션명 1
+                    <input
+                      type="text"
+                      value={draft.option_name1}
+                      onChange={(event) =>
+                        handleVariantChange(
+                          variant.variant_id,
+                          "option_name1",
+                          event.target.value,
+                        )
+                      }
+                    />
+                  </label>
 
-                <p>
-                  추가금액:{" "}
-                  {formatPrice(variant.additional_price)}
-                </p>
+                  <label>
+                    옵션값 1
+                    <input
+                      type="text"
+                      value={draft.option_value1}
+                      onChange={(event) =>
+                        handleVariantChange(
+                          variant.variant_id,
+                          "option_value1",
+                          event.target.value,
+                        )
+                      }
+                    />
+                  </label>
 
-                <p>상태: {variant.active_yn}</p>
-              </div>
-            ))}
+                  <label>
+                    옵션명 2
+                    <input
+                      type="text"
+                      value={draft.option_name2}
+                      onChange={(event) =>
+                        handleVariantChange(
+                          variant.variant_id,
+                          "option_name2",
+                          event.target.value,
+                        )
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    옵션값 2
+                    <input
+                      type="text"
+                      value={draft.option_value2}
+                      onChange={(event) =>
+                        handleVariantChange(
+                          variant.variant_id,
+                          "option_value2",
+                          event.target.value,
+                        )
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    추가 금액
+                    <input
+                      type="number"
+                      min="0"
+                      value={draft.additional_price}
+                      onChange={(event) =>
+                        handleVariantChange(
+                          variant.variant_id,
+                          "additional_price",
+                          event.target.value,
+                        )
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    상태
+                    <select
+                      value={draft.active_yn}
+                      onChange={(event) =>
+                        handleVariantChange(
+                          variant.variant_id,
+                          "active_yn",
+                          event.target.value,
+                        )
+                      }
+                    >
+                      <option value="Y">활성</option>
+                      <option value="N">비활성</option>
+                    </select>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => handleVariantSave(variant)}
+                    disabled={
+                      savingVariantId === variant.variant_id
+                    }
+                  >
+                    {savingVariantId === variant.variant_id
+                      ? "저장 중..."
+                      : "옵션 저장"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleVariantDelete(variant)}
+                    disabled={
+                      deletingVariantId === variant.variant_id ||
+                      variant.active_yn === "N"
+                    }
+                  >
+                    {deletingVariantId === variant.variant_id
+                      ? "처리 중..."
+                      : "옵션 비활성화"}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
       <div>
         <h2>재고 관리</h2>
-
-        {error && (
-          <p className="product-state product-state--error">
-            {error}
-          </p>
-        )}
-
-        {message && (
-          <p className="product-state">
-            {message}
-          </p>
-        )}
 
         {inventory.length === 0 ? (
           <p className="product-state">
