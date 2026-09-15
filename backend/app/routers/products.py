@@ -12,6 +12,7 @@ from app.schemas.product import (
     ProductUpdate,
     VariantCreate,
     VariantOut,
+    VariantUpdate,
 )
 
 
@@ -61,6 +62,31 @@ LEFT JOIN file_assets f
 
 def _to_product(row) -> ProductOut:
     return ProductOut(**dict(row._mapping))
+
+
+def _get_variant(
+    variant_id: int,
+    db: Session,
+):
+    return db.execute(
+        text(
+            """
+            SELECT
+                variant_id,
+                product_id,
+                sku_code,
+                option_name1,
+                option_value1,
+                option_name2,
+                option_value2,
+                additional_price,
+                active_yn
+            FROM product_variants
+            WHERE variant_id = :variant_id
+            """
+        ),
+        {"variant_id": variant_id},
+    ).mappings().first()
 
 
 @router.get("", response_model=list[ProductOut])
@@ -481,27 +507,140 @@ def create_variant(
             detail=f"옵션 등록 실패: {exc}",
         ) from exc
 
-    row = db.execute(
+    row = _get_variant(result.lastrowid, db)
+
+    return VariantOut(**dict(row))
+
+
+@router.put(
+    "/{product_id}/variants/{variant_id}",
+    response_model=VariantOut,
+)
+def update_variant(
+    product_id: int,
+    variant_id: int,
+    payload: VariantUpdate,
+    db: Session = Depends(get_db),
+):
+    current = db.execute(
+        text(
+            """
+            SELECT
+                variant_id,
+                product_id
+            FROM product_variants
+            WHERE variant_id = :variant_id
+              AND product_id = :product_id
+            """
+        ),
+        {
+            "variant_id": variant_id,
+            "product_id": product_id,
+        },
+    ).first()
+
+    if current is None:
+        raise HTTPException(
+            status_code=404,
+            detail="해당 상품의 옵션을 찾을 수 없습니다.",
+        )
+
+    data = payload.model_dump(exclude_unset=True)
+
+    if not data:
+        row = _get_variant(variant_id, db)
+        return VariantOut(**dict(row))
+
+    fields = []
+    params = {"variant_id": variant_id}
+
+    for key, value in data.items():
+        fields.append(f"{key} = :{key}")
+        params[key] = value
+
+    try:
+        db.execute(
+            text(
+                f"""
+                UPDATE product_variants
+                SET {", ".join(fields)}
+                WHERE variant_id = :variant_id
+                  AND product_id = :product_id
+                """
+            ),
+            {
+                **params,
+                "product_id": product_id,
+            },
+        )
+
+        db.commit()
+
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"옵션 수정 실패: {exc}",
+        ) from exc
+
+    row = _get_variant(variant_id, db)
+
+    return VariantOut(**dict(row))
+
+
+@router.delete(
+    "/{product_id}/variants/{variant_id}",
+    response_model=VariantOut,
+)
+def delete_variant(
+    product_id: int,
+    variant_id: int,
+    db: Session = Depends(get_db),
+):
+    current = db.execute(
         text(
             """
             SELECT
                 variant_id,
                 product_id,
-                sku_code,
-                option_name1,
-                option_value1,
-                option_name2,
-                option_value2,
-                additional_price,
                 active_yn
             FROM product_variants
             WHERE variant_id = :variant_id
+              AND product_id = :product_id
             """
         ),
-        {"variant_id": result.lastrowid},
+        {
+            "variant_id": variant_id,
+            "product_id": product_id,
+        },
     ).first()
 
-    return VariantOut(**dict(row._mapping))
+    if current is None:
+        raise HTTPException(
+            status_code=404,
+            detail="해당 상품의 옵션을 찾을 수 없습니다.",
+        )
+
+    db.execute(
+        text(
+            """
+            UPDATE product_variants
+            SET active_yn = 'N'
+            WHERE variant_id = :variant_id
+              AND product_id = :product_id
+            """
+        ),
+        {
+            "variant_id": variant_id,
+            "product_id": product_id,
+        },
+    )
+
+    db.commit()
+
+    row = _get_variant(variant_id, db)
+
+    return VariantOut(**dict(row))
 
 
 @router.get(

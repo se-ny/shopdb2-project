@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProductBase(BaseModel):
@@ -22,11 +22,21 @@ class ProductCreate(ProductBase):
 
 class ProductUpdate(BaseModel):
     category_id: Optional[int] = None
-    product_name: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    product_name: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=200,
+    )
     short_description: Optional[str] = None
     description: Optional[str] = None
-    regular_price: Optional[Decimal] = Field(default=None, gt=0)
-    sale_price: Optional[Decimal] = Field(default=None, gt=0)
+    regular_price: Optional[Decimal] = Field(
+        default=None,
+        gt=0,
+    )
+    sale_price: Optional[Decimal] = Field(
+        default=None,
+        gt=0,
+    )
     product_status: Optional[str] = None
 
 
@@ -48,6 +58,23 @@ class VariantCreate(BaseModel):
     option_name2: Optional[str] = None
     option_value2: Optional[str] = None
     additional_price: Decimal = Decimal("0")
+
+
+class VariantUpdate(BaseModel):
+    sku_code: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=100,
+    )
+    option_name1: Optional[str] = None
+    option_value1: Optional[str] = None
+    option_name2: Optional[str] = None
+    option_value2: Optional[str] = None
+    additional_price: Optional[Decimal] = None
+    active_yn: Optional[str] = Field(
+        default=None,
+        pattern="^[YN]$",
+    )
 
 
 class VariantOut(VariantCreate):

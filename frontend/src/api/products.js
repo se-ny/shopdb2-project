@@ -14,12 +14,16 @@ async function request(url, options = {}) {
     throw new Error(errorText || `HTTP ${response.status}`);
   }
 
-  if (response.status === 204) return null;
+  if (response.status === 204) {
+    return null;
+  }
+
   return response.json();
 }
 
 export function getProducts(params = {}) {
   const query = new URLSearchParams();
+
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
       query.set(key, value);
@@ -27,6 +31,7 @@ export function getProducts(params = {}) {
   });
 
   const suffix = query.toString() ? `?${query.toString()}` : "";
+
   return request(`/products${suffix}`);
 }
 
@@ -56,6 +61,26 @@ export function deleteProduct(productId) {
 
 export function getProductVariants(productId) {
   return request(`/products/${productId}/variants`);
+}
+
+export function createProductVariant(productId, variant) {
+  return request(`/products/${productId}/variants`, {
+    method: "POST",
+    body: JSON.stringify(variant),
+  });
+}
+
+export function updateProductVariant(productId, variantId, variant) {
+  return request(`/products/${productId}/variants/${variantId}`, {
+    method: "PUT",
+    body: JSON.stringify(variant),
+  });
+}
+
+export function deleteProductVariant(productId, variantId) {
+  return request(`/products/${productId}/variants/${variantId}`, {
+    method: "DELETE",
+  });
 }
 
 export function getProductInventory(productId) {
