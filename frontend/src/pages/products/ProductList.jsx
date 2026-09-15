@@ -9,7 +9,43 @@ export default function ProductList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function loadProducts(searchKeyword = keyword) {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProducts() {
+      try {
+        await Promise.resolve();
+
+        const data = await getProducts({
+          keyword: "",
+          product_status: "SALE",
+          skip: 0,
+          limit: 50,
+        });
+
+        if (!cancelled) {
+          setProducts(data);
+          setError("");
+          setLoading(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err.message || "상품을 불러오지 못했습니다.",
+          );
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function searchProducts(searchKeyword) {
     try {
       setLoading(true);
       setError("");
@@ -23,19 +59,17 @@ export default function ProductList() {
 
       setProducts(data);
     } catch (err) {
-      setError(err.message || "상품을 불러오지 못했습니다.");
+      setError(
+        err.message || "상품을 불러오지 못했습니다.",
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    loadProducts("");
-  }, []);
-
   function handleSubmit(event) {
     event.preventDefault();
-    loadProducts(keyword);
+    searchProducts(keyword);
   }
 
   return (
@@ -47,11 +81,16 @@ export default function ProductList() {
           <p>상품·판매 담당 상품 관리</p>
         </div>
 
-        <form className="product-search" onSubmit={handleSubmit}>
+        <form
+          className="product-search"
+          onSubmit={handleSubmit}
+        >
           <input
             type="text"
             value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
+            onChange={(event) =>
+              setKeyword(event.target.value)
+            }
             placeholder="상품명 또는 상품코드 검색"
           />
 
