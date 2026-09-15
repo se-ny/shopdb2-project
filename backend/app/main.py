@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import check_database_connection
+from app.routers import org_units, users, roles, policies, ai_providers, rag_documents, rag_query
 
 
 app = FastAPI(
@@ -21,6 +22,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(org_units.router) 
+app.include_router(users.router)
+app.include_router(roles.router)
+app.include_router(policies.router)
+app.include_router(ai_providers.router)
+app.include_router(rag_documents.router)
+app.include_router(rag_query.router)
 
 
 @app.get("/")
