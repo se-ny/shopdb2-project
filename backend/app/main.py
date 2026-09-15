@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import check_database_connection
 from app.routers import org_units, users, roles, policies, ai_providers, rag_documents, rag_query
+from app.routers.seller_products import router as seller_products_router
 
 
 app = FastAPI(
@@ -10,6 +11,8 @@ app = FastAPI(
     description="SHOPDB2 공통 FastAPI 백엔드",
     version="0.1.0",
 )
+
+app.include_router(seller_products_router)
 
 
 app.add_middleware(
