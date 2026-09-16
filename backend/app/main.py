@@ -2,7 +2,16 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import check_database_connection
-from app.routers import org_units, users, roles, policies, ai_providers, rag_documents, rag_query
+from app.routers import (
+    ai_providers,
+    org_units,
+    policies,
+    rag_documents,
+    rag_query,
+    roles,
+    users,
+)
+from app.routers.seller_orders import router as seller_orders_router
 from app.routers.seller_products import router as seller_products_router
 
 
@@ -13,6 +22,7 @@ app = FastAPI(
 )
 
 app.include_router(seller_products_router)
+app.include_router(seller_orders_router)
 
 
 app.add_middleware(
@@ -26,7 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(org_units.router) 
+app.include_router(org_units.router)
 app.include_router(users.router)
 app.include_router(roles.router)
 app.include_router(policies.router)
