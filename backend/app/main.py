@@ -13,6 +13,7 @@ from app.routers import (
 )
 from app.routers.seller_orders import router as seller_orders_router
 from app.routers.seller_products import router as seller_products_router
+from app.routers.seller_profiles import router as seller_profiles_router
 
 
 app = FastAPI(
@@ -23,6 +24,7 @@ app = FastAPI(
 
 app.include_router(seller_products_router)
 app.include_router(seller_orders_router)
+app.include_router(seller_profiles_router)
 
 
 app.add_middleware(

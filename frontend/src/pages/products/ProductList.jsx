@@ -4,6 +4,7 @@ import ProductCard from "../../components/ProductCard";
 import ProductDetail from "./ProductDetail";
 import ProductForm from "./ProductForm";
 import SellerOrderList from "../orders/SellerOrderList";
+import SellerProfile from "../seller/SellerProfile";
 import "../../styles/product.css";
 
 export default function ProductList() {
@@ -19,6 +20,9 @@ export default function ProductList() {
     useState(false);
 
   const [showSellerOrders, setShowSellerOrders] =
+    useState(false);
+
+  const [showSellerProfile, setShowSellerProfile] =
     useState(false);
 
   async function loadProducts(searchKeyword = "") {
@@ -48,6 +52,20 @@ export default function ProductList() {
     loadProducts();
   }, []);
 
+  function resetView() {
+    setSelectedProductId(null);
+    setShowCreateForm(false);
+    setShowSellerOrders(false);
+    setShowSellerProfile(false);
+  }
+
+  function scrollTop() {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
   function handleSubmit(event) {
     event.preventDefault();
 
@@ -55,60 +73,81 @@ export default function ProductList() {
   }
 
   function handleProductClick(productId) {
-    setSelectedProductId(productId);
-    setShowCreateForm(false);
-    setShowSellerOrders(false);
+    resetView();
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    setSelectedProductId(productId);
+
+    scrollTop();
   }
 
   function handleBackToList() {
-    setSelectedProductId(null);
-    setShowCreateForm(false);
-    setShowSellerOrders(false);
+    resetView();
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    scrollTop();
   }
 
   function handleOpenCreateForm() {
-    setShowCreateForm(true);
-    setSelectedProductId(null);
-    setShowSellerOrders(false);
+    resetView();
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    setShowCreateForm(true);
+
+    scrollTop();
   }
 
   function handleOpenSellerOrders() {
-    setShowSellerOrders(true);
-    setSelectedProductId(null);
-    setShowCreateForm(false);
+    resetView();
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    setShowSellerOrders(true);
+
+    scrollTop();
+  }
+
+  function handleOpenSellerProfile() {
+    resetView();
+
+    setShowSellerProfile(true);
+
+    scrollTop();
   }
 
   async function handleCreated() {
-    setShowCreateForm(false);
-
-    await loadProducts("");
+    resetView();
 
     setKeyword("");
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    await loadProducts("");
+
+    scrollTop();
+  }
+
+  if (showSellerProfile) {
+    return (
+      <section>
+        <div
+          style={{
+            maxWidth: "900px",
+            margin: "24px auto 0",
+            padding: "0 24px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleBackToList}
+            style={{
+              padding: "10px 16px",
+              border: "1px solid #dddddd",
+              borderRadius: "8px",
+              background: "#ffffff",
+              cursor: "pointer",
+            }}
+          >
+            ← 상품 관리로
+          </button>
+        </div>
+
+        <SellerProfile />
+      </section>
+    );
   }
 
   if (showSellerOrders) {
@@ -259,6 +298,20 @@ export default function ProductList() {
             }}
           >
             판매 주문 관리
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenSellerProfile}
+            style={{
+              padding: "11px 18px",
+              border: "1px solid #111111",
+              borderRadius: "8px",
+              background: "#ffffff",
+              cursor: "pointer",
+            }}
+          >
+            판매자 정보 관리
           </button>
 
           <button
