@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getProducts } from "../../api/products";
 import ProductCard from "../../components/ProductCard";
 import ProductDetail from "./ProductDetail";
+import ProductForm from "./ProductForm";
 import "../../styles/product.css";
 
 export default function ProductList() {
@@ -10,49 +11,13 @@ export default function ProductList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // 선택한 상품 ID
-  // 값이 있으면 상세 화면을 표시
   const [selectedProductId, setSelectedProductId] =
     useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const [showCreateForm, setShowCreateForm] =
+    useState(false);
 
-    async function loadProducts() {
-      try {
-        const data = await getProducts({
-          keyword: "",
-          product_status: "SALE",
-          skip: 0,
-          limit: 50,
-        });
-
-        if (!cancelled) {
-          setProducts(data);
-          setError("");
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err.message ||
-              "상품을 불러오지 못했습니다.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadProducts();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function searchProducts(searchKeyword) {
+  async function loadProducts(searchKeyword = "") {
     try {
       setLoading(true);
       setError("");
@@ -75,10 +40,14 @@ export default function ProductList() {
     }
   }
 
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
   function handleSubmit(event) {
     event.preventDefault();
 
-    searchProducts(keyword.trim());
+    loadProducts(keyword.trim());
   }
 
   function handleProductClick(productId) {
@@ -92,6 +61,7 @@ export default function ProductList() {
 
   function handleBackToList() {
     setSelectedProductId(null);
+    setShowCreateForm(false);
 
     window.scrollTo({
       top: 0,
@@ -99,7 +69,62 @@ export default function ProductList() {
     });
   }
 
-  // 상품이 선택되었으면 상세 화면 표시
+  function handleOpenCreateForm() {
+    setShowCreateForm(true);
+    setSelectedProductId(null);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  async function handleCreated() {
+    setShowCreateForm(false);
+
+    await loadProducts("");
+
+    setKeyword("");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  if (showCreateForm) {
+    return (
+      <section>
+        <div
+          style={{
+            maxWidth: "1280px",
+            margin: "24px auto 0",
+            padding: "0 24px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleBackToList}
+            style={{
+              padding: "10px 16px",
+              border: "1px solid #dddddd",
+              borderRadius: "8px",
+              background: "#ffffff",
+              cursor: "pointer",
+            }}
+          >
+            ← 상품 목록으로
+          </button>
+        </div>
+
+        <ProductForm
+          onCreated={handleCreated}
+          onCancel={handleBackToList}
+        />
+      </section>
+    );
+  }
+
   if (selectedProductId !== null) {
     return (
       <section>
@@ -147,23 +172,47 @@ export default function ProductList() {
           </p>
         </div>
 
-        <form
-          className="product-search"
-          onSubmit={handleSubmit}
+        <div
+          style={{
+            display: "flex",
+            gap: "12px",
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
         >
-          <input
-            type="text"
-            value={keyword}
-            onChange={(event) =>
-              setKeyword(event.target.value)
-            }
-            placeholder="상품명 또는 상품코드 검색"
-          />
+          <form
+            className="product-search"
+            onSubmit={handleSubmit}
+          >
+            <input
+              type="text"
+              value={keyword}
+              onChange={(event) =>
+                setKeyword(event.target.value)
+              }
+              placeholder="상품명 또는 상품코드 검색"
+            />
 
-          <button type="submit">
-            검색
+            <button type="submit">
+              검색
+            </button>
+          </form>
+
+          <button
+            type="button"
+            onClick={handleOpenCreateForm}
+            style={{
+              padding: "11px 18px",
+              border: "0",
+              borderRadius: "8px",
+              background: "#111111",
+              color: "#ffffff",
+              cursor: "pointer",
+            }}
+          >
+            + 상품 등록
           </button>
-        </form>
+        </div>
       </div>
 
       {loading && (
