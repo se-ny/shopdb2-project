@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchProviders, fetchDocuments, indexDocument, queryRag } from "../../api/admin";
+import DocumentForm from "./DocumentForm";
 
 function AiRagPage() {
   const [providers, setProviders] = useState([]);
@@ -7,6 +8,7 @@ function AiRagPage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [indexingId, setIndexingId] = useState(null);
+  const [showDocForm, setShowDocForm] = useState(false);
 
   const [question, setQuestion] = useState("");
   const [providerCode, setProviderCode] = useState("OLLAMA");
@@ -87,7 +89,17 @@ function AiRagPage() {
         </tbody>
       </table>
 
-      <h2 className="policy-section-title">문서 목록 (인덱싱)</h2>
+      <div className="admin-page-header">
+        <h2 className="policy-section-title">문서 목록 (인덱싱)</h2>
+        {!showDocForm && <button onClick={() => setShowDocForm(true)}>+ 문서 등록</button>}
+    </div>
+    {showDocForm && (
+        <DocumentForm
+        providers={providers}
+        onSaved={() => { setShowDocForm(false); loadAll(); }}
+        onCancel={() => setShowDocForm(false)}
+    />
+)}
       <table className="admin-table">
         <thead>
           <tr>

@@ -1,17 +1,30 @@
 import { useEffect, useState } from "react";
-import { fetchUsers } from "../../api/admin";
+import { fetchUsers, fetchRoles } from "../../api/admin";
+import UserEditPanel from "./UserEditPanel";
 
 function UserList() {
   const [users, setUsers] = useState([]);
+  const [allRoles, setAllRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [editingUserId, setEditingUserId] = useState(null);
 
-  useEffect(() => {
-    fetchUsers()
-      .then(setUsers)
+  function loadAll() {
+    setLoading(true);
+    Promise.all([fetchUsers(), fetchRoles()])
+      .then(([userData, roleData]) => {
+        setUsers(userData);
+        setAllRoles(roleData);
+      })
       .catch((error) => setErrorMessage(error.message))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadAll();
   }, []);
+
+  const editingUser = users.find((u) => u.user_id === editingUserId);
 
   if (loading) return <p>불러오는 중...</p>;
   if (errorMessage) return <p className="error-message">{errorMessage}</p>;
@@ -19,6 +32,16 @@ function UserList() {
   return (
     <div>
       <h1>회원/권한 관리</h1>
+
+      {editingUser && (
+        <UserEditPanel
+          user={editingUser}
+          allRoles={allRoles}
+          onSaved={loadAll}
+          onCancel={() => setEditingUserId(null)}
+        />
+      )}
+
       <table className="admin-table">
         <thead>
           <tr>
@@ -28,6 +51,7 @@ function UserList() {
             <th>소속 조직</th>
             <th>역할</th>
             <th>상태</th>
+            <th>동작</th>
           </tr>
         </thead>
         <tbody>
@@ -45,6 +69,9 @@ function UserList() {
                 ))}
               </td>
               <td>{user.user_status}</td>
+              <td>
+                <button onClick={() => setEditingUserId(user.user_id)}>수정</button>
+              </td>
             </tr>
           ))}
         </tbody>

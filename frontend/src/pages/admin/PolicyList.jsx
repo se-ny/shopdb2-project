@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
-import { fetchCompanyPolicies, fetchRefundPolicies } from "../../api/admin";
+import { fetchCompanyPolicies, fetchRefundPolicies, expireCompanyPolicy, expireRefundPolicy } from "../../api/admin";
+import CompanyPolicyForm from "./CompanyPolicyForm";
+import RefundPolicyForm from "./RefundPolicyForm";
 
 function PolicyList() {
   const [companyPolicies, setCompanyPolicies] = useState([]);
   const [refundPolicies, setRefundPolicies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [showCompanyForm, setShowCompanyForm] = useState(false);
+  const [showRefundForm, setShowRefundForm] = useState(false);
 
-  useEffect(() => {
+  function loadAll() {
+    setLoading(true);
     Promise.all([fetchCompanyPolicies(), fetchRefundPolicies()])
       .then(([company, refund]) => {
         setCompanyPolicies(company);
@@ -15,7 +20,23 @@ function PolicyList() {
       })
       .catch((error) => setErrorMessage(error.message))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadAll();
   }, []);
+
+  async function handleExpireCompany(policyId) {
+    if (!confirm("이 정책을 만료 처리하시겠습니까?")) return;
+    await expireCompanyPolicy(policyId);
+    loadAll();
+  }
+
+  async function handleExpireRefund(refundPolicyId) {
+    if (!confirm("이 환불정책을 만료 처리하시겠습니까?")) return;
+    await expireRefundPolicy(refundPolicyId);
+    loadAll();
+  }
 
   if (loading) return <p>불러오는 중...</p>;
   if (errorMessage) return <p className="error-message">{errorMessage}</p>;
@@ -24,16 +45,20 @@ function PolicyList() {
     <div>
       <h1>정책 관리</h1>
 
-      <h2 className="policy-section-title">이용약관 (company_policies)</h2>
+      <div className="admin-page-header">
+        <h2 className="policy-section-title">이용약관 (company_policies)</h2>
+        {!showCompanyForm && <button onClick={() => setShowCompanyForm(true)}>+ 새 버전 등록</button>}
+      </div>
+      {showCompanyForm && (
+        <CompanyPolicyForm
+          onSaved={() => { setShowCompanyForm(false); loadAll(); }}
+          onCancel={() => setShowCompanyForm(false)}
+        />
+      )}
       <table className="admin-table">
         <thead>
           <tr>
-            <th>정책코드</th>
-            <th>정책명</th>
-            <th>버전</th>
-            <th>시행일</th>
-            <th>종료일</th>
-            <th>상태</th>
+            <th>정책코드</th><th>정책명</th><th>버전</th><th>시행일</th><th>종료일</th><th>상태</th><th>동작</th>
           </tr>
         </thead>
         <tbody>
@@ -45,23 +70,30 @@ function PolicyList() {
               <td>{policy.effective_from}</td>
               <td>{policy.effective_to ?? "-"}</td>
               <td>{policy.active_yn === "Y" ? "활성" : "만료"}</td>
+              <td>
+                {policy.active_yn === "Y" && (
+                  <button onClick={() => handleExpireCompany(policy.policy_id)}>만료처리</button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <h2 className="policy-section-title">환불정책 (refund_policies)</h2>
+      <div className="admin-page-header">
+        <h2 className="policy-section-title">환불정책 (refund_policies)</h2>
+        {!showRefundForm && <button onClick={() => setShowRefundForm(true)}>+ 새 버전 등록</button>}
+      </div>
+      {showRefundForm && (
+        <RefundPolicyForm
+          onSaved={() => { setShowRefundForm(false); loadAll(); }}
+          onCancel={() => setShowRefundForm(false)}
+        />
+      )}
       <table className="admin-table">
         <thead>
           <tr>
-            <th>정책명</th>
-            <th>허용일수</th>
-            <th>미개봉환불</th>
-            <th>개봉환불</th>
-            <th>불량환불</th>
-            <th>배송비부담</th>
-            <th>시행일</th>
-            <th>상태</th>
+            <th>정책명</th><th>허용일수</th><th>미개봉환불</th><th>개봉환불</th><th>불량환불</th><th>배송비부담</th><th>시행일</th><th>상태</th><th>동작</th>
           </tr>
         </thead>
         <tbody>
@@ -75,6 +107,11 @@ function PolicyList() {
               <td>{policy.shipping_fee_payer}</td>
               <td>{policy.effective_from}</td>
               <td>{policy.active_yn === "Y" ? "활성" : "만료"}</td>
+              <td>
+                {policy.active_yn === "Y" && (
+                  <button onClick={() => handleExpireRefund(policy.refund_policy_id)}>만료처리</button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
