@@ -3,6 +3,7 @@ import { getProducts } from "../../api/products";
 import ProductCard from "../../components/ProductCard";
 import ProductDetail from "./ProductDetail";
 import ProductForm from "./ProductForm";
+import SellerOrderList from "../orders/SellerOrderList";
 import "../../styles/product.css";
 
 export default function ProductList() {
@@ -15,6 +16,9 @@ export default function ProductList() {
     useState(null);
 
   const [showCreateForm, setShowCreateForm] =
+    useState(false);
+
+  const [showSellerOrders, setShowSellerOrders] =
     useState(false);
 
   async function loadProducts(searchKeyword = "") {
@@ -52,6 +56,8 @@ export default function ProductList() {
 
   function handleProductClick(productId) {
     setSelectedProductId(productId);
+    setShowCreateForm(false);
+    setShowSellerOrders(false);
 
     window.scrollTo({
       top: 0,
@@ -62,6 +68,7 @@ export default function ProductList() {
   function handleBackToList() {
     setSelectedProductId(null);
     setShowCreateForm(false);
+    setShowSellerOrders(false);
 
     window.scrollTo({
       top: 0,
@@ -72,6 +79,18 @@ export default function ProductList() {
   function handleOpenCreateForm() {
     setShowCreateForm(true);
     setSelectedProductId(null);
+    setShowSellerOrders(false);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  function handleOpenSellerOrders() {
+    setShowSellerOrders(true);
+    setSelectedProductId(null);
+    setShowCreateForm(false);
 
     window.scrollTo({
       top: 0,
@@ -90,6 +109,36 @@ export default function ProductList() {
       top: 0,
       behavior: "smooth",
     });
+  }
+
+  if (showSellerOrders) {
+    return (
+      <section>
+        <div
+          style={{
+            maxWidth: "1200px",
+            margin: "24px auto 0",
+            padding: "0 24px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleBackToList}
+            style={{
+              padding: "10px 16px",
+              border: "1px solid #dddddd",
+              borderRadius: "8px",
+              background: "#ffffff",
+              cursor: "pointer",
+            }}
+          >
+            ← 상품 관리로
+          </button>
+        </div>
+
+        <SellerOrderList />
+      </section>
+    );
   }
 
   if (showCreateForm) {
@@ -197,6 +246,20 @@ export default function ProductList() {
               검색
             </button>
           </form>
+
+          <button
+            type="button"
+            onClick={handleOpenSellerOrders}
+            style={{
+              padding: "11px 18px",
+              border: "1px solid #111111",
+              borderRadius: "8px",
+              background: "#ffffff",
+              cursor: "pointer",
+            }}
+          >
+            판매 주문 관리
+          </button>
 
           <button
             type="button"
