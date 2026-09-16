@@ -3,16 +3,32 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import check_database_connection
 
-# 구매자 상품 조회 Router
+# ============================================================
+# 구매자 Router
+# ============================================================
+
+# 구매자 상품 조회
 from app.routers.products import router as products_router
 
-# 구매자 주문 Router
+# 구매자 주문 생성 / 조회
 from app.routers.orders import router as orders_router
 
-# 판매자 상품/옵션/재고 관리 Router
+
+# ============================================================
+# 판매자 Router
+# ============================================================
+
+# 판매자 상품 / 옵션 / 이미지 / 재고 관리
 from app.routers.seller_products import router as seller_products_router
 
+# 판매자 주문 조회
+from app.routers.seller_orders import router as seller_orders_router
+
+
+# ============================================================
 # 관리자 / AI / RAG Router
+# ============================================================
+
 from app.routers import (
     ai_providers,
     org_units,
@@ -46,8 +62,11 @@ app.include_router(orders_router)
 # 판매자 영역
 # ============================================================
 
-# 상품 / 옵션 / 재고 관리
+# 상품 / 옵션 / 이미지 / 재고 관리
 app.include_router(seller_products_router)
+
+# 판매자 주문 조회
+app.include_router(seller_orders_router)
 
 
 # ============================================================
@@ -109,6 +128,7 @@ def database_health_check():
 
     try:
         result = check_database_connection()
+
     except Exception as error:
         raise HTTPException(
             status_code=503,

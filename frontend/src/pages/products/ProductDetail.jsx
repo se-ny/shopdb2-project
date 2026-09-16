@@ -1,13 +1,35 @@
 import { useEffect, useState } from "react";
+import ProductImageManager from "../../components/ProductImageManager";
 import {
+  createProductVariant,
+  deleteProduct,
+  deleteProductVariant,
   getProduct,
   getProductInventory,
   getProductVariants,
+  updateProduct,
   updateProductInventory,
   updateProductVariant,
-  deleteProductVariant,
 } from "../../api/products";
 import "../../styles/product.css";
+
+const CATEGORY_OPTIONS = [
+  { id: 1, name: "전자제품" },
+  { id: 2, name: "패션" },
+  { id: 3, name: "노트북" },
+  { id: 4, name: "스마트폰" },
+  { id: 5, name: "상의" },
+  { id: 6, name: "신발" },
+];
+
+const EMPTY_VARIANT = {
+  sku_code: "",
+  option_name1: "",
+  option_value1: "",
+  option_name2: "",
+  option_value2: "",
+  additional_price: 0,
+};
 
 function formatPrice(value) {
   const number = Number(value);
@@ -21,14 +43,40 @@ function formatPrice(value) {
 
 export default function ProductDetail({ productId }) {
   const [product, setProduct] = useState(null);
+  const [productDraft, setProductDraft] = useState(null);
+
   const [variants, setVariants] = useState([]);
   const [inventory, setInventory] = useState([]);
-  const [inventoryDrafts, setInventoryDrafts] = useState({});
-  const [variantDrafts, setVariantDrafts] = useState({});
+
+  const [inventoryDrafts, setInventoryDrafts] =
+    useState({});
+
+  const [variantDrafts, setVariantDrafts] =
+    useState({});
+
+  const [newVariant, setNewVariant] =
+    useState(EMPTY_VARIANT);
+
   const [loading, setLoading] = useState(true);
-  const [savingInventoryId, setSavingInventoryId] = useState(null);
-  const [savingVariantId, setSavingVariantId] = useState(null);
-  const [deletingVariantId, setDeletingVariantId] = useState(null);
+
+  const [savingProduct, setSavingProduct] =
+    useState(false);
+
+  const [deletingProduct, setDeletingProduct] =
+    useState(false);
+
+  const [creatingVariant, setCreatingVariant] =
+    useState(false);
+
+  const [savingInventoryId, setSavingInventoryId] =
+    useState(null);
+
+  const [savingVariantId, setSavingVariantId] =
+    useState(null);
+
+  const [deletingVariantId, setDeletingVariantId] =
+    useState(null);
+
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -37,32 +85,49 @@ export default function ProductDetail({ productId }) {
 
     async function loadProductDetail() {
       try {
-        await Promise.resolve();
-
         if (!productId) {
           if (!cancelled) {
             setError("상품 ID가 없습니다.");
             setLoading(false);
           }
+
           return;
         }
 
-        const [productData, variantData, inventoryData] =
-          await Promise.all([
-            getProduct(productId),
-            getProductVariants(productId),
-            getProductInventory(productId),
-          ]);
+        const [
+          productData,
+          variantData,
+          inventoryData,
+        ] = await Promise.all([
+          getProduct(productId),
+          getProductVariants(productId),
+          getProductInventory(productId),
+        ]);
 
         if (cancelled) {
           return;
         }
 
         setProduct(productData);
+
+        setProductDraft({
+          category_id: productData.category_id,
+          product_name:
+            productData.product_name || "",
+          short_description:
+            productData.short_description || "",
+          description:
+            productData.description || "",
+          regular_price:
+            productData.regular_price ?? "",
+          sale_price:
+            productData.sale_price ?? "",
+          product_status:
+            productData.product_status || "READY",
+        });
+
         setVariants(variantData);
         setInventory(inventoryData);
-        setError("");
-        setMessage("");
 
         const inventoryDraftData = {};
 
@@ -80,23 +145,33 @@ export default function ProductDetail({ productId }) {
         variantData.forEach((variant) => {
           variantDraftData[variant.variant_id] = {
             sku_code: variant.sku_code,
-            option_name1: variant.option_name1 || "",
-            option_value1: variant.option_value1 || "",
-            option_name2: variant.option_name2 || "",
-            option_value2: variant.option_value2 || "",
-            additional_price: variant.additional_price,
+            option_name1:
+              variant.option_name1 || "",
+            option_value1:
+              variant.option_value1 || "",
+            option_name2:
+              variant.option_name2 || "",
+            option_value2:
+              variant.option_value2 || "",
+            additional_price:
+              variant.additional_price,
             active_yn: variant.active_yn,
           };
         });
 
         setVariantDrafts(variantDraftData);
-        setLoading(false);
+
+        setError("");
+        setMessage("");
       } catch (err) {
         if (!cancelled) {
           setError(
             err.message ||
               "상품 상세 정보를 불러오지 못했습니다.",
           );
+        }
+      } finally {
+        if (!cancelled) {
           setLoading(false);
         }
       }
@@ -108,6 +183,231 @@ export default function ProductDetail({ productId }) {
       cancelled = true;
     };
   }, [productId]);
+
+  function handleProductChange(event) {
+    const { name, value } = event.target;
+
+    setProductDraft((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }
+
+  async function handleProductSave() {
+    if (!productDraft) {
+      return;
+    }
+
+    const regularPrice = Number(
+      productDraft.regular_price,
+    );
+
+    const salePrice = Number(
+      productDraft.sale_price,
+    );
+
+    if (!productDraft.product_name.trim()) {
+      setError("상품명을 입력해주세요.");
+      return;
+    }
+
+    if (regularPrice <= 0 || salePrice <= 0) {
+      setError(
+        "정상가와 판매가는 0보다 커야 합니다.",
+      );
+      return;
+    }
+
+    if (salePrice > regularPrice) {
+      setError(
+        "판매가는 정상가보다 높을 수 없습니다.",
+      );
+      return;
+    }
+
+    try {
+      setSavingProduct(true);
+      setError("");
+      setMessage("");
+
+      const updated = await updateProduct(
+        productId,
+        {
+          category_id: Number(
+            productDraft.category_id,
+          ),
+          product_name:
+            productDraft.product_name.trim(),
+          short_description:
+            productDraft.short_description.trim() ||
+            null,
+          description:
+            productDraft.description.trim() || null,
+          regular_price: regularPrice,
+          sale_price: salePrice,
+          product_status:
+            productDraft.product_status,
+        },
+      );
+
+      setProduct(updated);
+
+      setProductDraft({
+        category_id: updated.category_id,
+        product_name:
+          updated.product_name || "",
+        short_description:
+          updated.short_description || "",
+        description:
+          updated.description || "",
+        regular_price:
+          updated.regular_price ?? "",
+        sale_price:
+          updated.sale_price ?? "",
+        product_status:
+          updated.product_status || "READY",
+      });
+
+      setMessage("상품 정보가 수정되었습니다.");
+    } catch (err) {
+      setError(
+        err.message ||
+          "상품 수정에 실패했습니다.",
+      );
+    } finally {
+      setSavingProduct(false);
+    }
+  }
+
+  async function handleProductDelete() {
+    const confirmed = window.confirm(
+      "이 상품을 삭제 처리하시겠습니까?\n실제 행 삭제가 아니라 DELETED 상태로 변경됩니다.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingProduct(true);
+      setError("");
+      setMessage("");
+
+      await deleteProduct(productId);
+
+      setProduct((current) => ({
+        ...current,
+        product_status: "DELETED",
+      }));
+
+      setProductDraft((current) => ({
+        ...current,
+        product_status: "DELETED",
+      }));
+
+      setMessage(
+        "상품이 삭제 상태(DELETED)로 변경되었습니다.",
+      );
+    } catch (err) {
+      setError(
+        err.message ||
+          "상품 삭제 처리에 실패했습니다.",
+      );
+    } finally {
+      setDeletingProduct(false);
+    }
+  }
+
+  function handleNewVariantChange(event) {
+    const { name, value } = event.target;
+
+    setNewVariant((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }
+
+  async function handleCreateVariant(event) {
+    event.preventDefault();
+
+    if (!newVariant.sku_code.trim()) {
+      setError("SKU 코드를 입력해주세요.");
+      return;
+    }
+
+    if (
+      Number(newVariant.additional_price) < 0
+    ) {
+      setError(
+        "추가 금액은 0 이상이어야 합니다.",
+      );
+      return;
+    }
+
+    try {
+      setCreatingVariant(true);
+      setError("");
+      setMessage("");
+
+      const created =
+        await createProductVariant(productId, {
+          product_id: Number(productId),
+          sku_code:
+            newVariant.sku_code.trim(),
+          option_name1:
+            newVariant.option_name1.trim() ||
+            null,
+          option_value1:
+            newVariant.option_value1.trim() ||
+            null,
+          option_name2:
+            newVariant.option_name2.trim() ||
+            null,
+          option_value2:
+            newVariant.option_value2.trim() ||
+            null,
+          additional_price: Number(
+            newVariant.additional_price,
+          ),
+        });
+
+      setVariants((current) => [
+        ...current,
+        created,
+      ]);
+
+      setVariantDrafts((current) => ({
+        ...current,
+        [created.variant_id]: {
+          sku_code: created.sku_code,
+          option_name1:
+            created.option_name1 || "",
+          option_value1:
+            created.option_value1 || "",
+          option_name2:
+            created.option_name2 || "",
+          option_value2:
+            created.option_value2 || "",
+          additional_price:
+            created.additional_price,
+          active_yn: created.active_yn,
+        },
+      }));
+
+      setNewVariant(EMPTY_VARIANT);
+
+      setMessage(
+        `옵션이 등록되었습니다. (${created.sku_code})`,
+      );
+    } catch (err) {
+      setError(
+        err.message ||
+          "옵션 등록에 실패했습니다.",
+      );
+    } finally {
+      setCreatingVariant(false);
+    }
+  }
 
   function handleInventoryChange(
     inventoryId,
@@ -129,20 +429,26 @@ export default function ProductDetail({ productId }) {
       setError("");
       setMessage("");
 
-      const draft = inventoryDrafts[item.inventory_id];
+      const draft =
+        inventoryDrafts[item.inventory_id];
 
       const updated = await updateProductInventory(
         productId,
         item.inventory_id,
         {
-          stock_quantity: Number(draft.stock_quantity),
-          safety_stock: Number(draft.safety_stock),
+          stock_quantity: Number(
+            draft.stock_quantity,
+          ),
+          safety_stock: Number(
+            draft.safety_stock,
+          ),
         },
       );
 
       setInventory((current) =>
         current.map((inventoryItem) =>
-          inventoryItem.inventory_id === item.inventory_id
+          inventoryItem.inventory_id ===
+          item.inventory_id
             ? updated
             : inventoryItem,
         ),
@@ -151,8 +457,10 @@ export default function ProductDetail({ productId }) {
       setInventoryDrafts((current) => ({
         ...current,
         [item.inventory_id]: {
-          stock_quantity: updated.stock_quantity,
-          safety_stock: updated.safety_stock,
+          stock_quantity:
+            updated.stock_quantity,
+          safety_stock:
+            updated.safety_stock,
         },
       }));
 
@@ -161,7 +469,8 @@ export default function ProductDetail({ productId }) {
       );
     } catch (err) {
       setError(
-        err.message || "재고 수정에 실패했습니다.",
+        err.message ||
+          "재고 수정에 실패했습니다.",
       );
     } finally {
       setSavingInventoryId(null);
@@ -188,17 +497,22 @@ export default function ProductDetail({ productId }) {
       setError("");
       setMessage("");
 
-      const draft = variantDrafts[variant.variant_id];
+      const draft =
+        variantDrafts[variant.variant_id];
 
       const updated = await updateProductVariant(
         productId,
         variant.variant_id,
         {
           sku_code: draft.sku_code,
-          option_name1: draft.option_name1 || null,
-          option_value1: draft.option_value1 || null,
-          option_name2: draft.option_name2 || null,
-          option_value2: draft.option_value2 || null,
+          option_name1:
+            draft.option_name1 || null,
+          option_value1:
+            draft.option_value1 || null,
+          option_name2:
+            draft.option_name2 || null,
+          option_value2:
+            draft.option_value2 || null,
           additional_price: Number(
             draft.additional_price,
           ),
@@ -208,7 +522,8 @@ export default function ProductDetail({ productId }) {
 
       setVariants((current) =>
         current.map((currentVariant) =>
-          currentVariant.variant_id === variant.variant_id
+          currentVariant.variant_id ===
+          variant.variant_id
             ? updated
             : currentVariant,
         ),
@@ -218,11 +533,16 @@ export default function ProductDetail({ productId }) {
         ...current,
         [variant.variant_id]: {
           sku_code: updated.sku_code,
-          option_name1: updated.option_name1 || "",
-          option_value1: updated.option_value1 || "",
-          option_name2: updated.option_name2 || "",
-          option_value2: updated.option_value2 || "",
-          additional_price: updated.additional_price,
+          option_name1:
+            updated.option_name1 || "",
+          option_value1:
+            updated.option_value1 || "",
+          option_name2:
+            updated.option_name2 || "",
+          option_value2:
+            updated.option_value2 || "",
+          additional_price:
+            updated.additional_price,
           active_yn: updated.active_yn,
         },
       }));
@@ -232,7 +552,8 @@ export default function ProductDetail({ productId }) {
       );
     } catch (err) {
       setError(
-        err.message || "옵션 수정에 실패했습니다.",
+        err.message ||
+          "옵션 수정에 실패했습니다.",
       );
     } finally {
       setSavingVariantId(null);
@@ -241,18 +562,23 @@ export default function ProductDetail({ productId }) {
 
   async function handleVariantDelete(variant) {
     try {
-      setDeletingVariantId(variant.variant_id);
-      setError("");
-      setMessage("");
-
-      const updated = await deleteProductVariant(
-        productId,
+      setDeletingVariantId(
         variant.variant_id,
       );
 
+      setError("");
+      setMessage("");
+
+      const updated =
+        await deleteProductVariant(
+          productId,
+          variant.variant_id,
+        );
+
       setVariants((current) =>
         current.map((currentVariant) =>
-          currentVariant.variant_id === variant.variant_id
+          currentVariant.variant_id ===
+          variant.variant_id
             ? updated
             : currentVariant,
         ),
@@ -299,7 +625,7 @@ export default function ProductDetail({ productId }) {
     );
   }
 
-  if (!product) {
+  if (!product || !productDraft) {
     return (
       <section className="product-page">
         <p className="product-state">
@@ -323,7 +649,8 @@ export default function ProductDetail({ productId }) {
               className="product-card__image"
               src={imageUrl}
               alt={
-                product.product_name || "상품 이미지"
+                product.product_name ||
+                "상품 이미지"
               }
             />
           ) : (
@@ -335,42 +662,181 @@ export default function ProductDetail({ productId }) {
 
         <div className="product-detail__info">
           <p className="product-page__eyebrow">
-            {product.category_name || "상품"}
+            상품 정보 수정
           </p>
 
-          <h1>{product.product_name}</h1>
-
-          <p>상품코드: {product.product_code}</p>
+          <p>
+            상품코드: {product.product_code}
+          </p>
 
           <p>
             판매자:{" "}
             {product.seller_name || "정보 없음"}
           </p>
 
-          {product.short_description && (
-            <p>{product.short_description}</p>
-          )}
+          <label>
+            카테고리
+            <select
+              name="category_id"
+              value={productDraft.category_id}
+              onChange={handleProductChange}
+            >
+              {CATEGORY_OPTIONS.map(
+                (category) => (
+                  <option
+                    key={category.id}
+                    value={category.id}
+                  >
+                    {category.name}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
 
-          {product.description && (
-            <p>{product.description}</p>
-          )}
+          <label>
+            상품명
+            <input
+              type="text"
+              name="product_name"
+              value={
+                productDraft.product_name
+              }
+              onChange={handleProductChange}
+            />
+          </label>
+
+          <label>
+            짧은 설명
+            <input
+              type="text"
+              name="short_description"
+              value={
+                productDraft.short_description
+              }
+              onChange={handleProductChange}
+            />
+          </label>
+
+          <label>
+            상세 설명
+            <textarea
+              name="description"
+              value={productDraft.description}
+              onChange={handleProductChange}
+              rows={5}
+            />
+          </label>
+
+          <label>
+            정상가
+            <input
+              type="number"
+              name="regular_price"
+              min="1"
+              value={
+                productDraft.regular_price
+              }
+              onChange={handleProductChange}
+            />
+          </label>
+
+          <label>
+            판매가
+            <input
+              type="number"
+              name="sale_price"
+              min="1"
+              value={productDraft.sale_price}
+              onChange={handleProductChange}
+            />
+          </label>
+
+          <label>
+            상품 상태
+            <select
+              name="product_status"
+              value={
+                productDraft.product_status
+              }
+              onChange={handleProductChange}
+            >
+              <option value="READY">
+                판매 준비
+              </option>
+
+              <option value="SALE">
+                판매 중
+              </option>
+
+              <option value="SOLD_OUT">
+                품절
+              </option>
+
+              <option value="STOPPED">
+                판매 중지
+              </option>
+
+              <option value="DELETED">
+                삭제 상태
+              </option>
+            </select>
+          </label>
 
           <div className="product-card__price">
             <strong className="product-card__sale-price">
-              {formatPrice(product.sale_price)}
+              {formatPrice(
+                product.sale_price,
+              )}
             </strong>
 
-            {Number(product.regular_price) !==
+            {Number(
+              product.regular_price,
+            ) !==
               Number(product.sale_price) && (
               <span className="product-card__regular-price">
-                {formatPrice(product.regular_price)}
+                {formatPrice(
+                  product.regular_price,
+                )}
               </span>
             )}
           </div>
 
-          <p>
-            상품 상태: {product.product_status}
-          </p>
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              marginTop: "16px",
+              flexWrap: "wrap",
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleProductSave}
+              disabled={
+                savingProduct ||
+                deletingProduct
+              }
+            >
+              {savingProduct
+                ? "상품 저장 중..."
+                : "상품 저장"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleProductDelete}
+              disabled={
+                deletingProduct ||
+                product.product_status ===
+                  "DELETED"
+              }
+            >
+              {deletingProduct
+                ? "삭제 처리 중..."
+                : "상품 삭제"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -391,6 +857,94 @@ export default function ProductDetail({ productId }) {
       )}
 
       <div>
+        <h2>신규 옵션 등록</h2>
+
+        <form
+          onSubmit={handleCreateVariant}
+          style={{
+            display: "grid",
+            gap: "10px",
+            marginBottom: "28px",
+          }}
+        >
+          <label>
+            SKU 코드
+            <input
+              type="text"
+              name="sku_code"
+              value={newVariant.sku_code}
+              onChange={handleNewVariantChange}
+              placeholder="예: NOTEBOOK-BLACK-16GB"
+            />
+          </label>
+
+          <label>
+            옵션명 1
+            <input
+              type="text"
+              name="option_name1"
+              value={newVariant.option_name1}
+              onChange={handleNewVariantChange}
+              placeholder="예: 색상"
+            />
+          </label>
+
+          <label>
+            옵션값 1
+            <input
+              type="text"
+              name="option_value1"
+              value={newVariant.option_value1}
+              onChange={handleNewVariantChange}
+              placeholder="예: 블랙"
+            />
+          </label>
+
+          <label>
+            옵션명 2
+            <input
+              type="text"
+              name="option_name2"
+              value={newVariant.option_name2}
+              onChange={handleNewVariantChange}
+              placeholder="예: 메모리"
+            />
+          </label>
+
+          <label>
+            옵션값 2
+            <input
+              type="text"
+              name="option_value2"
+              value={newVariant.option_value2}
+              onChange={handleNewVariantChange}
+              placeholder="예: 16GB"
+            />
+          </label>
+
+          <label>
+            추가 금액
+            <input
+              type="number"
+              name="additional_price"
+              min="0"
+              value={
+                newVariant.additional_price
+              }
+              onChange={handleNewVariantChange}
+            />
+          </label>
+
+          <button
+            type="submit"
+            disabled={creatingVariant}
+          >
+            {creatingVariant
+              ? "옵션 등록 중..."
+              : "+ 옵션 등록"}
+          </button>
+        </form>
+
         <h2>상품 옵션 관리</h2>
 
         {variants.length === 0 ? (
@@ -401,23 +955,33 @@ export default function ProductDetail({ productId }) {
           <div>
             {variants.map((variant) => {
               const draft =
-                variantDrafts[variant.variant_id] || {
-                  sku_code: variant.sku_code,
+                variantDrafts[
+                  variant.variant_id
+                ] || {
+                  sku_code:
+                    variant.sku_code,
                   option_name1:
-                    variant.option_name1 || "",
+                    variant.option_name1 ||
+                    "",
                   option_value1:
-                    variant.option_value1 || "",
+                    variant.option_value1 ||
+                    "",
                   option_name2:
-                    variant.option_name2 || "",
+                    variant.option_name2 ||
+                    "",
                   option_value2:
-                    variant.option_value2 || "",
+                    variant.option_value2 ||
+                    "",
                   additional_price:
                     variant.additional_price,
-                  active_yn: variant.active_yn,
+                  active_yn:
+                    variant.active_yn,
                 };
 
               return (
-                <div key={variant.variant_id}>
+                <div
+                  key={variant.variant_id}
+                >
                   <label>
                     SKU 코드
                     <input
@@ -437,7 +1001,9 @@ export default function ProductDetail({ productId }) {
                     옵션명 1
                     <input
                       type="text"
-                      value={draft.option_name1}
+                      value={
+                        draft.option_name1
+                      }
                       onChange={(event) =>
                         handleVariantChange(
                           variant.variant_id,
@@ -452,7 +1018,9 @@ export default function ProductDetail({ productId }) {
                     옵션값 1
                     <input
                       type="text"
-                      value={draft.option_value1}
+                      value={
+                        draft.option_value1
+                      }
                       onChange={(event) =>
                         handleVariantChange(
                           variant.variant_id,
@@ -467,7 +1035,9 @@ export default function ProductDetail({ productId }) {
                     옵션명 2
                     <input
                       type="text"
-                      value={draft.option_name2}
+                      value={
+                        draft.option_name2
+                      }
                       onChange={(event) =>
                         handleVariantChange(
                           variant.variant_id,
@@ -482,7 +1052,9 @@ export default function ProductDetail({ productId }) {
                     옵션값 2
                     <input
                       type="text"
-                      value={draft.option_value2}
+                      value={
+                        draft.option_value2
+                      }
                       onChange={(event) =>
                         handleVariantChange(
                           variant.variant_id,
@@ -498,7 +1070,9 @@ export default function ProductDetail({ productId }) {
                     <input
                       type="number"
                       min="0"
-                      value={draft.additional_price}
+                      value={
+                        draft.additional_price
+                      }
                       onChange={(event) =>
                         handleVariantChange(
                           variant.variant_id,
@@ -521,15 +1095,22 @@ export default function ProductDetail({ productId }) {
                         )
                       }
                     >
-                      <option value="Y">활성</option>
-                      <option value="N">비활성</option>
+                      <option value="Y">
+                        활성
+                      </option>
+
+                      <option value="N">
+                        비활성
+                      </option>
                     </select>
                   </label>
 
                   <button
                     type="button"
                     onClick={() =>
-                      handleVariantSave(variant)
+                      handleVariantSave(
+                        variant,
+                      )
                     }
                     disabled={
                       savingVariantId ===
@@ -545,12 +1126,15 @@ export default function ProductDetail({ productId }) {
                   <button
                     type="button"
                     onClick={() =>
-                      handleVariantDelete(variant)
+                      handleVariantDelete(
+                        variant,
+                      )
                     }
                     disabled={
                       deletingVariantId ===
                         variant.variant_id ||
-                      variant.active_yn === "N"
+                      variant.active_yn ===
+                        "N"
                     }
                   >
                     {deletingVariantId ===
@@ -576,23 +1160,33 @@ export default function ProductDetail({ productId }) {
           <div>
             {inventory.map((item) => {
               const draft =
-                inventoryDrafts[item.inventory_id] || {
-                  stock_quantity: item.stock_quantity,
-                  safety_stock: item.safety_stock,
+                inventoryDrafts[
+                  item.inventory_id
+                ] || {
+                  stock_quantity:
+                    item.stock_quantity,
+                  safety_stock:
+                    item.safety_stock,
                 };
 
               return (
-                <div key={item.inventory_id}>
+                <div
+                  key={item.inventory_id}
+                >
                   <p>{item.org_name}</p>
 
-                  <p>SKU: {item.variant_id}</p>
+                  <p>
+                    SKU: {item.variant_id}
+                  </p>
 
                   <label>
                     재고 수량
                     <input
                       type="number"
                       min="0"
-                      value={draft.stock_quantity}
+                      value={
+                        draft.stock_quantity
+                      }
                       onChange={(event) =>
                         handleInventoryChange(
                           item.inventory_id,
@@ -608,7 +1202,9 @@ export default function ProductDetail({ productId }) {
                     <input
                       type="number"
                       min="0"
-                      value={draft.safety_stock}
+                      value={
+                        draft.safety_stock
+                      }
                       onChange={(event) =>
                         handleInventoryChange(
                           item.inventory_id,
@@ -620,7 +1216,8 @@ export default function ProductDetail({ productId }) {
                   </label>
 
                   <p>
-                    예약: {item.reserved_quantity}
+                    예약:{" "}
+                    {item.reserved_quantity}
                   </p>
 
                   <p>
@@ -631,7 +1228,9 @@ export default function ProductDetail({ productId }) {
                   <button
                     type="button"
                     onClick={() =>
-                      handleInventorySave(item)
+                      handleInventorySave(
+                        item,
+                      )
                     }
                     disabled={
                       savingInventoryId ===
@@ -649,6 +1248,7 @@ export default function ProductDetail({ productId }) {
           </div>
         )}
       </div>
+      <ProductImageManager productId={productId} />
     </section>
   );
 }

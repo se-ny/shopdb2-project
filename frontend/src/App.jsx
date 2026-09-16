@@ -1,14 +1,46 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
 import "./App.css";
-import ProductList from "./components/ProductList";
+
+// ============================================================
+// 구매자
+// ============================================================
+
+// 구매자 상품 목록 / 상품 상세
+import BuyerProductList from "./components/ProductList";
+
+// ============================================================
+// 판매자
+// ============================================================
+
+// 판매자 상품 / 옵션 / 이미지 / 재고 관리
+import SellerProductList from "./pages/products/ProductList";
+
+// ============================================================
+// 관리자
+// ============================================================
+
+import AdminLayout from "./pages/admin/AdminLayout";
+import OrgList from "./pages/admin/OrgList";
+import UserList from "./pages/admin/UserList";
+import PolicyList from "./pages/admin/PolicyList";
+import AiRagPage from "./pages/admin/AiRagPage";
+
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
-function App() {
+
+function HomePage() {
   const [backendStatus, setBackendStatus] = useState("확인 중");
   const [databaseStatus, setDatabaseStatus] = useState("확인 중");
   const [databaseInfo, setDatabaseInfo] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  // 현재 화면
+  // home   = 공통 개발환경 화면
+  // seller = 판매자 상품관리 화면
+  const [currentView, setCurrentView] = useState("home");
+
 
   useEffect(() => {
     async function checkDevelopmentEnvironment() {
@@ -18,23 +50,29 @@ function App() {
         );
 
         if (!backendResponse.ok) {
-          throw new Error(`Backend HTTP ${backendResponse.status}`);
+          throw new Error(
+            `Backend HTTP ${backendResponse.status}`
+          );
         }
 
         const backendData = await backendResponse.json();
 
-        if (backendData.success && backendData.status === "healthy") {
-          setBackendStatus("정상 연결");
-        } else {
-          setBackendStatus("응답 확인 필요");
-        }
+        setBackendStatus(
+          backendData.success &&
+          backendData.status === "healthy"
+            ? "정상 연결"
+            : "응답 확인 필요"
+        );
+
 
         const databaseResponse = await fetch(
           `${API_BASE_URL}/api/health/db`
         );
 
         if (!databaseResponse.ok) {
-          throw new Error(`Database HTTP ${databaseResponse.status}`);
+          throw new Error(
+            `Database HTTP ${databaseResponse.status}`
+          );
         }
 
         const databaseData = await databaseResponse.json();
@@ -44,6 +82,7 @@ function App() {
           databaseData.status === "connected"
         ) {
           setDatabaseStatus("정상 연결");
+
           setDatabaseInfo(
             `${databaseData.database} · 테이블 ${databaseData.table_count}개`
           );
@@ -60,24 +99,79 @@ function App() {
     checkDevelopmentEnvironment();
   }, []);
 
+
+  // ============================================================
+  // 판매자 상품관리 화면
+  // ============================================================
+
+  if (currentView === "seller") {
+    return (
+      <>
+        <div
+          style={{
+            maxWidth: "1280px",
+            margin: "20px auto 0",
+            padding: "0 24px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setCurrentView("home")}
+            style={{
+              padding: "10px 16px",
+              border: "1px solid #dbe3ef",
+              borderRadius: "8px",
+              background: "#ffffff",
+              cursor: "pointer",
+            }}
+          >
+            ← 메인으로
+          </button>
+        </div>
+
+        <SellerProductList />
+      </>
+    );
+  }
+
+
+  // ============================================================
+  // 메인 화면
+  // ============================================================
+
   return (
     <main className="app">
       <header>
-        <p className="project-label">React · FastAPI · MySQL</p>
+        <p className="project-label">
+          React · FastAPI · MySQL
+        </p>
+
         <h1>SHOPDB2</h1>
-        <p>쇼핑몰 통합 서비스 공통 개발환경</p>
+
+        <p>
+          쇼핑몰 통합 서비스 공통 개발환경
+        </p>
       </header>
+
+
+      {/* ======================================================
+          개발환경 상태
+      ====================================================== */}
 
       <section className="status-card">
         <h2>개발환경 연결 상태</h2>
 
         <div className="status-row">
           <strong>Frontend</strong>
-          <span className="success">정상 실행</span>
+
+          <span className="success">
+            정상 실행
+          </span>
         </div>
 
         <div className="status-row">
           <strong>Backend</strong>
+
           <span
             className={
               backendStatus === "정상 연결"
@@ -100,7 +194,9 @@ function App() {
             }
           >
             {databaseStatus}
-            {databaseInfo && ` · ${databaseInfo}`}
+
+            {databaseInfo &&
+              ` · ${databaseInfo}`}
           </span>
         </div>
 
@@ -111,30 +207,121 @@ function App() {
         )}
       </section>
 
+
+      {/* ======================================================
+          서비스 영역
+      ====================================================== */}
+
       <section className="role-section">
         <h2>서비스 영역</h2>
 
         <div className="role-grid">
+
+          {/* 구매자 */}
           <article>
             <h3>구매자</h3>
-            <p>상품 조회, 주문, 결제, 환불, 문의</p>
+
+            <p>
+              상품 조회, 주문, 결제, 환불, 문의
+            </p>
           </article>
 
+
+          {/* 판매자 */}
           <article>
             <h3>판매자</h3>
-            <p>상품, 옵션, 이미지, 재고 관리</p>
+
+            <p>
+              상품, 옵션, 이미지, 재고 관리
+            </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentView("seller")
+              }
+              style={{
+                marginTop: "16px",
+                padding: "10px 14px",
+                border: "0",
+                borderRadius: "8px",
+                background: "#1d4ed8",
+                color: "#ffffff",
+                cursor: "pointer",
+              }}
+            >
+              상품 관리 열기
+            </button>
           </article>
 
+
+          {/* 관리자 */}
           <article>
             <h3>관리자</h3>
-            <p>회원, 조직, 권한, 정책, AI/RAG 관리</p>
-          </article>
-        </div>
-           </section>
 
-      <ProductList />
+            <p>
+              회원, 조직, 권한, 정책,
+              AI/RAG 관리
+            </p>
+          </article>
+
+        </div>
+      </section>
+
+
+      {/* ======================================================
+          구매자 상품 목록
+      ====================================================== */}
+
+      <BuyerProductList />
+
     </main>
   );
 }
+
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+
+        {/* 메인 / 구매자 / 판매자 */}
+        <Route
+          path="/"
+          element={<HomePage />}
+        />
+
+
+        {/* 관리자 */}
+        <Route
+          path="/admin"
+          element={<AdminLayout />}
+        >
+          <Route
+            path="orgs"
+            element={<OrgList />}
+          />
+
+          <Route
+            path="users"
+            element={<UserList />}
+          />
+
+          <Route
+            path="policies"
+            element={<PolicyList />}
+          />
+
+          <Route
+            path="ai"
+            element={<AiRagPage />}
+          />
+        </Route>
+
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
 
 export default App;

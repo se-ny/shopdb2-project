@@ -1,4 +1,4 @@
-import "../../styles/product.css";
+import "../styles/product.css";
 
 function formatPrice(value) {
   const number = Number(value);
