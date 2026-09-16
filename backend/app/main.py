@@ -6,6 +6,9 @@ from app.core.database import check_database_connection
 # 구매자 상품 조회 Router
 from app.routers.products import router as products_router
 
+# 구매자 주문 Router
+from app.routers.orders import router as orders_router
+
 # 판매자 상품/옵션/재고 관리 Router
 from app.routers.seller_products import router as seller_products_router
 
@@ -32,13 +35,18 @@ app = FastAPI(
 # 구매자 영역
 # ============================================================
 
+# 상품 목록 / 상품 상세
 app.include_router(products_router)
+
+# 주문 생성 / 주문 목록 / 주문 상세
+app.include_router(orders_router)
 
 
 # ============================================================
 # 판매자 영역
 # ============================================================
 
+# 상품 / 옵션 / 재고 관리
 app.include_router(seller_products_router)
 
 
