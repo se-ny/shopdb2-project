@@ -30,9 +30,48 @@ export async function deactivateOrg(orgId) {
   return handleResponse(response);
 }
 
+export async function updateOrg(orgId, payload) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/orgs/${orgId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
 // ---- 회원/권한 ----
 export async function fetchUsers() {
   const response = await fetch(`${API_BASE_URL}/api/admin/users`);
+  return handleResponse(response);
+}
+
+export async function fetchRoles() {
+  const response = await fetch(`${API_BASE_URL}/api/admin/roles`);
+  return handleResponse(response);
+}
+
+export async function updateUser(userId, payload) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+export async function assignRole(userId, roleId) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/roles`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role_id: roleId }),
+  });
+  return handleResponse(response);
+}
+
+export async function removeRole(userId, roleId) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/roles/${roleId}`, {
+    method: "DELETE",
+  });
   return handleResponse(response);
 }
 
@@ -46,6 +85,39 @@ export async function fetchRefundPolicies() {
   const response = await fetch(`${API_BASE_URL}/api/admin/policies/refund`);
   return handleResponse(response);
 }
+
+export async function createCompanyPolicy(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/policies/company`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+export async function expireCompanyPolicy(policyId) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/policies/company/${policyId}/expire`, {
+    method: "PATCH",
+  });
+  return handleResponse(response);
+}
+
+export async function createRefundPolicy(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/policies/refund`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+export async function expireRefundPolicy(refundPolicyId) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/policies/refund/${refundPolicyId}/expire`, {
+    method: "PATCH",
+  });
+  return handleResponse(response);
+}
+
 // ---- AI / RAG ----
 export async function fetchProviders() {
   const response = await fetch(`${API_BASE_URL}/api/admin/ai/providers`);
@@ -54,6 +126,15 @@ export async function fetchProviders() {
 
 export async function fetchDocuments() {
   const response = await fetch(`${API_BASE_URL}/api/admin/ai/documents`);
+  return handleResponse(response);
+}
+
+export async function createDocument(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/ai/documents`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
   return handleResponse(response);
 }
 

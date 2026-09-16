@@ -101,3 +101,46 @@
   font-size: 12px;
   color: #6b7280;
 }
+.admin-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.admin-form {
+  max-width: 480px;
+  margin: 16px 0;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.admin-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: #374151;
+}
+.admin-form input,
+.admin-form select {
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+.admin-form-actions {
+  display: flex;
+  gap: 8px;
+}
+.admin-table td button {
+  margin-right: 4px;
+}
+.admin-form textarea {
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-family: inherit;
+  resize: vertical;
+}
