@@ -2,8 +2,23 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import check_database_connection
+
+# 구매자 상품 조회 Router
 from app.routers.products import router as products_router
+
+# 판매자 상품/옵션/재고 관리 Router
 from app.routers.seller_products import router as seller_products_router
+
+# 관리자 / AI / RAG Router
+from app.routers import (
+    ai_providers,
+    org_units,
+    policies,
+    rag_documents,
+    rag_query,
+    roles,
+    users,
+)
 
 
 app = FastAPI(
@@ -13,12 +28,36 @@ app = FastAPI(
 )
 
 
-# 구매자 상품 조회 API
+# ============================================================
+# 구매자 영역
+# ============================================================
+
 app.include_router(products_router)
 
-# 판매자 상품/옵션/재고 관리 API
+
+# ============================================================
+# 판매자 영역
+# ============================================================
+
 app.include_router(seller_products_router)
 
+
+# ============================================================
+# 관리자 / AI / RAG 영역
+# ============================================================
+
+app.include_router(org_units.router)
+app.include_router(users.router)
+app.include_router(roles.router)
+app.include_router(policies.router)
+app.include_router(ai_providers.router)
+app.include_router(rag_documents.router)
+app.include_router(rag_query.router)
+
+
+# ============================================================
+# CORS 설정
+# ============================================================
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,6 +70,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# ============================================================
+# 기본 상태 확인 API
+# ============================================================
 
 @app.get("/")
 def read_root():
