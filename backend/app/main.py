@@ -4,34 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import check_database_connection
 
 
-# ============================================================
-# 구매자 Router
-# ============================================================
-
-# 구매자 상품 조회
 from app.routers.products import router as products_router
-
-# 구매자 주문 생성 / 조회
 from app.routers.orders import router as orders_router
 
 
-# ============================================================
-# 판매자 Router
-# ============================================================
-
-# 판매자 상품 / 옵션 / 이미지 / 재고 관리
 from app.routers.seller_products import router as seller_products_router
-
-# 판매자 주문 조회
 from app.routers.seller_orders import router as seller_orders_router
-
-# 판매자 정보 조회 / 수정
 from app.routers.seller_profiles import router as seller_profiles_router
 
-
-# ============================================================
-# 관리자 / AI / RAG Router
-# ============================================================
 
 from app.routers import (
     ai_providers,
@@ -51,34 +31,15 @@ app = FastAPI(
 )
 
 
-# ============================================================
-# 구매자 영역
-# ============================================================
-
-# 상품 목록 / 상품 상세
 app.include_router(products_router)
 
-# 주문 생성 / 주문 목록 / 주문 상세
 app.include_router(orders_router)
 
 
-# ============================================================
-# 판매자 영역
-# ============================================================
-
-# 상품 / 옵션 / 이미지 / 재고 관리
 app.include_router(seller_products_router)
-
-# 판매자 주문 조회
 app.include_router(seller_orders_router)
-
-# 판매자 정보 조회 / 수정
 app.include_router(seller_profiles_router)
 
-
-# ============================================================
-# 관리자 / AI / RAG 영역
-# ============================================================
 
 app.include_router(org_units.router)
 app.include_router(users.router)
@@ -88,10 +49,6 @@ app.include_router(ai_providers.router)
 app.include_router(rag_documents.router)
 app.include_router(rag_query.router)
 
-
-# ============================================================
-# CORS 설정
-# ============================================================
 
 app.add_middleware(
     CORSMiddleware,
@@ -104,10 +61,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# ============================================================
-# 기본 상태 확인 API
-# ============================================================
 
 @app.get("/")
 def read_root():
