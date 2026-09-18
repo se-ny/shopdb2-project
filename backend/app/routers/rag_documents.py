@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.deps import require_role, CurrentUser
 from app.models.ai import AIProvider, RagDocument, RagChunk, RagEmbedding
 from app.schemas.ai import RagDocumentCreate, RagDocumentResponse, RagChunkResponse
 from app.services.chunking import split_into_chunks
@@ -14,12 +15,19 @@ router = APIRouter(prefix="/api/admin/ai/documents", tags=["rag-documents"])
 
 
 @router.get("", response_model=List[RagDocumentResponse])
-def list_documents(db: Session = Depends(get_db)):
+def list_documents(
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("ADMIN")),
+):
     return db.query(RagDocument).order_by(RagDocument.document_id).all()
 
 
 @router.post("", response_model=RagDocumentResponse, status_code=201)
-def create_document(payload: RagDocumentCreate, db: Session = Depends(get_db)):
+def create_document(
+    payload: RagDocumentCreate,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("ADMIN")),
+):
     document = RagDocument(**payload.model_dump())
     db.add(document)
     db.commit()
@@ -28,7 +36,11 @@ def create_document(payload: RagDocumentCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{document_id}/chunks", response_model=List[RagChunkResponse])
-def list_chunks(document_id: int, db: Session = Depends(get_db)):
+def list_chunks(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("ADMIN")),
+):
     return (
         db.query(RagChunk)
         .filter(RagChunk.document_id == document_id)
@@ -38,7 +50,12 @@ def list_chunks(document_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{document_id}/index", response_model=List[RagChunkResponse])
-def index_document(document_id: int, provider_code: str | None = None, db: Session = Depends(get_db)):
+def index_document(
+    document_id: int,
+    provider_code: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("ADMIN")),
+):
     """문서를 청크로 나누고 임베딩을 생성해 Qdrant + MySQL에 저장합니다."""
 
     document = db.query(RagDocument).filter(RagDocument.document_id == document_id).first()

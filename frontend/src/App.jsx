@@ -17,6 +17,14 @@ import BuyerProductList from "./components/ProductList";
 import SellerProductList from "./pages/products/ProductList";
 
 // ============================================================
+// 인증
+// ============================================================
+
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import LoginPage from "./pages/LoginPage";
+import RequireAdmin from "./components/RequireAdmin";
+
+// ============================================================
 // 관리자
 // ============================================================
 
@@ -35,6 +43,7 @@ function HomePage() {
   const [databaseStatus, setDatabaseStatus] = useState("확인 중");
   const [databaseInfo, setDatabaseInfo] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const { auth, logout } = useAuth();
 
   // 현재 화면
   // home   = 공통 개발환경 화면
@@ -54,7 +63,7 @@ function HomePage() {
             `Backend HTTP ${backendResponse.status}`
           );
         }
-
+        
         const backendData = await backendResponse.json();
 
         setBackendStatus(
@@ -151,6 +160,31 @@ function HomePage() {
         <p>
           쇼핑몰 통합 서비스 공통 개발환경
         </p>
+
+        {auth ? (
+          <div style={{ fontSize: 14, display: "flex", alignItems: "center", gap: 12 }}>
+            <span>
+              <strong>{auth.user_name}</strong>님 환영합니다 ({auth.roles.join(", ")})
+            </span>
+            <button
+              onClick={logout}
+              style={{
+                padding: "4px 10px",
+                border: "1px solid #dbe3ef",
+                borderRadius: "6px",
+                background: "#ffffff",
+                cursor: "pointer",
+                fontSize: 13,
+              }}
+            >
+              로그아웃
+            </button>
+          </div>
+        ) : (
+          <a href="/login" style={{ fontSize: 14, color: "#1d4ed8" }}>
+            로그인 →
+          </a>
+       )}
       </header>
 
 
@@ -282,44 +316,56 @@ function HomePage() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
 
-        {/* 메인 / 구매자 / 판매자 */}
-        <Route
-          path="/"
-          element={<HomePage />}
-        />
-
-
-        {/* 관리자 */}
-        <Route
-          path="/admin"
-          element={<AdminLayout />}
-        >
+          {/* 메인 / 구매자 / 판매자 */}
           <Route
-            path="orgs"
-            element={<OrgList />}
+            path="/"
+            element={<HomePage />}
           />
 
+          {/* 로그인 */}
           <Route
-            path="users"
-            element={<UserList />}
+            path="/login"
+            element={<LoginPage />}
           />
 
-          <Route
-            path="policies"
-            element={<PolicyList />}
-          />
 
+          {/* 관리자 */}
           <Route
-            path="ai"
-            element={<AiRagPage />}
-          />
-        </Route>
+            path="/admin"
+            element={
+              <RequireAdmin>
+                <AdminLayout />
+              </RequireAdmin>
+            }
+          >
+            <Route
+              path="orgs"
+              element={<OrgList />}
+            />
 
-      </Routes>
-    </BrowserRouter>
+            <Route
+              path="users"
+              element={<UserList />}
+            />
+
+            <Route
+              path="policies"
+              element={<PolicyList />}
+            />
+
+            <Route
+              path="ai"
+              element={<AiRagPage />}
+            />
+          </Route>
+
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

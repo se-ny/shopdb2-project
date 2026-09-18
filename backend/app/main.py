@@ -12,6 +12,7 @@ from app.routers.seller_products import router as seller_products_router
 from app.routers.seller_orders import router as seller_orders_router
 from app.routers.seller_profiles import router as seller_profiles_router
 
+from app.routers import org_units, users, roles, policies, ai_providers, rag_documents, rag_query, auth
 
 from app.routers import (
     ai_providers,
@@ -49,6 +50,7 @@ app.include_router(ai_providers.router)
 app.include_router(rag_documents.router)
 app.include_router(rag_query.router)
 
+app.include_router(auth.router)
 
 app.add_middleware(
     CORSMiddleware,
