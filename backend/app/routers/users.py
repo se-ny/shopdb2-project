@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
+from app.core.deps import require_role, CurrentUser
 from app.models.user import User, Role, UserRole
 from app.schemas.user import UserResponse, UserUpdate, RoleAssign
 
@@ -11,7 +12,10 @@ router = APIRouter(prefix="/api/admin/users", tags=["users"])
 
 
 @router.get("", response_model=List[UserResponse])
-def list_users(db: Session = Depends(get_db)):
+def list_users(
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("ADMIN")),
+):
     return (
         db.query(User)
         .options(joinedload(User.roles))
@@ -21,7 +25,11 @@ def list_users(db: Session = Depends(get_db)):
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-def get_user(user_id: int, db: Session = Depends(get_db)):
+def get_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("ADMIN")),
+):
     user = (
         db.query(User)
         .options(joinedload(User.roles))
@@ -34,7 +42,12 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{user_id}", response_model=UserResponse)
-def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)):
+def update_user(
+    user_id: int,
+    payload: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("ADMIN")),
+):
     user = db.query(User).filter(User.user_id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="회원을 찾을 수 없습니다.")
@@ -48,7 +61,12 @@ def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)
 
 
 @router.post("/{user_id}/roles", response_model=UserResponse, status_code=201)
-def assign_role(user_id: int, payload: RoleAssign, db: Session = Depends(get_db)):
+def assign_role(
+    user_id: int,
+    payload: RoleAssign,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("ADMIN")),
+):
     user = db.query(User).filter(User.user_id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="회원을 찾을 수 없습니다.")
@@ -72,7 +90,12 @@ def assign_role(user_id: int, payload: RoleAssign, db: Session = Depends(get_db)
 
 
 @router.delete("/{user_id}/roles/{role_id}", response_model=UserResponse)
-def remove_role(user_id: int, role_id: int, db: Session = Depends(get_db)):
+def remove_role(
+    user_id: int,
+    role_id: int,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("ADMIN")),
+):
     user_role = (
         db.query(UserRole)
         .filter_by(user_id=user_id, role_id=role_id)

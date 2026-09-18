@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.deps import get_current_user, require_role, CurrentUser
 from app.models.ai import AIProvider, RagChunk, RagQueryLog
 from app.schemas.ai import RagQueryRequest, RagQueryResponse
 from app.services.embeddings import get_embedding
@@ -14,7 +15,11 @@ router = APIRouter(prefix="/api/ai", tags=["ai-query"])
 
 
 @router.post("/query", response_model=RagQueryResponse)
-def query_rag(payload: RagQueryRequest, db: Session = Depends(get_db)):
+def query_rag(
+    payload: RagQueryRequest,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
     start = time.perf_counter()
 
     provider = (
@@ -43,7 +48,7 @@ def query_rag(payload: RagQueryRequest, db: Session = Depends(get_db)):
     elapsed_ms = int((time.perf_counter() - start) * 1000)
 
     db.add(RagQueryLog(
-        user_id=payload.user_id,
+        user_id=current_user.user_id,  # 클라이언트가 보낸 값 대신 토큰의 진짜 user_id 사용
         provider_id=provider.provider_id,
         question_text=payload.question,
         response_text=answer,
@@ -62,7 +67,10 @@ def query_rag(payload: RagQueryRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/query-logs", tags=["ai-query"])
-def list_query_logs(db: Session = Depends(get_db)):
+def list_query_logs(
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("ADMIN")),
+):
     logs = db.query(RagQueryLog).order_by(RagQueryLog.query_log_id.desc()).limit(50).all()
     return [
         {
