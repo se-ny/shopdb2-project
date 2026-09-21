@@ -1,13 +1,19 @@
 from pydantic import BaseModel, Field
 
 
-class OrderCreate(BaseModel):
-    """구매자가 주문 생성 시 전달하는 데이터입니다."""
+class OrderCreateItem(BaseModel):
+    """주문할 상품 옵션과 수량입니다."""
 
-    buyer_user_id: int
     product_id: int
     variant_id: int
     quantity: int = Field(gt=0)
+    cart_item_id: int | None = None
+    
+
+class OrderCreate(BaseModel):
+    """로그인한 구매자가 주문 생성 시 전달하는 정보입니다."""
+
+    items: list[OrderCreateItem] = Field(min_length=1)
 
     receiver_name: str
     receiver_phone: str
@@ -51,4 +57,4 @@ class OrderOut(BaseModel):
     shipping_address2: str | None
 
     ordered_at: str | None = None
-    items: list[OrderItemOut] = []
+    items: list[OrderItemOut] = Field(default_factory=list)
