@@ -66,7 +66,7 @@ def query_rag(
     )
 
 
-@router.get("/query-logs", tags=["ai-query"])
+@router.get("/query-logs", tags=["AI 상담기록"])
 def list_query_logs(
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(require_role("ADMIN")),
