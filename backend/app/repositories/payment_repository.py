@@ -120,6 +120,28 @@ def get_payments_by_order_id(
 
     return rows
 
+def get_order_for_payment(
+    db: Session,
+    order_id: int,
+):
+    row = db.execute(
+        text(
+            """
+            SELECT
+                order_id,
+                buyer_user_id,
+                order_status,
+                total_amount
+            FROM orders
+            WHERE order_id = :order_id
+            """
+        ),
+        {
+            "order_id": order_id,
+        },
+    ).mappings().first()
+
+    return row
 
 def create_payment(
     db: Session,
@@ -593,51 +615,7 @@ def release_order_reserved_inventory(
             },
         )
 
-        db.execute(
-            text(
-                """
-                INSERT INTO inventory_movements
-                (
-                    inventory_id,
-                    movement_type,
-                    quantity_change,
-                    stock_before,
-                    stock_after,
-                    reserved_before,
-                    reserved_after,
-                    reference_type,
-                    reference_id,
-                    reason,
-                    changed_by_user_id
-                )
-                VALUES
-                (
-                    :inventory_id,
-                    'RELEASE',
-                    0,
-                    :stock_before,
-                    :stock_after,
-                    :reserved_before,
-                    :reserved_after,
-                    'ORDER',
-                    :order_id,
-                    '결제 전체 취소로 예약재고 해제',
-                    NULL
-                )
-                """
-            ),
-            {
-                "inventory_id":
-                    item["inventory_id"],
-                "stock_before":
-                    stock_before,
-                "stock_after":
-                    stock_after,
-                "reserved_before":
-                    reserved_before,
-                "reserved_after":
-                    reserved_after,
-                "order_id":
-                    order_id,
-            },
-        )    
+        # MVP NOTE:
+        # The current DB does not contain the inventory_movements table.
+        # Keep reservation release working; movement-history INSERT is deferred
+        # until the team confirms/creates that table.
