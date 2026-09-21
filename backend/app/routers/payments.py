@@ -10,6 +10,7 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from app.core.database import engine
+from app.core.deps import CurrentUser, require_role
 from app.schemas.payment import (
     PaymentCreate,
     PaymentOut,
@@ -69,11 +70,13 @@ def _handle_payment_error(exc: Exception):
 def create_payment(
     payload: PaymentCreate,
     db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("BUYER")),
 ):
     try:
         return payment_service.create_payment(
             db,
             payload,
+            current_user.user_id,
         )
 
     except (
@@ -90,11 +93,13 @@ def create_payment(
 def get_payments_by_order(
     order_id: int,
     db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("BUYER")),
 ):
     try:
         return payment_service.get_payments_by_order(
             db,
             order_id,
+            current_user.user_id,
         )
 
     except (
@@ -111,11 +116,13 @@ def get_payments_by_order(
 def get_payment(
     payment_id: int,
     db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("BUYER")),
 ):
     try:
         return payment_service.get_payment(
             db,
             payment_id,
+            current_user.user_id,
         )
 
     except (
@@ -132,6 +139,7 @@ def get_payment(
 def update_payment(
     payment_id: int,
     payload: PaymentUpdate,
+    current_user: CurrentUser = Depends(require_role("BUYER")),
     db: Session = Depends(get_db),
 ):
     try:
@@ -139,6 +147,8 @@ def update_payment(
             db,
             payment_id,
             payload,
+
+            buyer_user_id=current_user.user_id,
         )
 
     except (
@@ -161,6 +171,7 @@ def create_payment_transaction(
     payment_id: int,
     payload: PaymentTransactionCreate,
     db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("BUYER")),
 ):
     try:
         return (
@@ -169,6 +180,7 @@ def create_payment_transaction(
                 db,
                 payment_id,
                 payload,
+                current_user.user_id,
             )
         )
 
@@ -186,6 +198,7 @@ def create_payment_transaction(
 def get_payment_transactions(
     payment_id: int,
     db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("BUYER")),
 ):
     try:
         return (
@@ -193,6 +206,7 @@ def get_payment_transactions(
             .get_payment_transactions(
                 db,
                 payment_id,
+                current_user.user_id,
             )
         )
 

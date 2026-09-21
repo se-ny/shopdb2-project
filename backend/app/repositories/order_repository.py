@@ -82,13 +82,8 @@ def create_order(
     order_no: str,
     buyer_user_id: int,
     org_id: int,
-    product_id: int,
-    variant_id: int,
-    product_name: str,
-    sku_code: str | None,
-    quantity: int,
-    unit_price,
-    item_amount,
+    items: list[dict],
+    product_amount,
     receiver_name: str,
     receiver_phone: str,
     zipcode: str | None,
@@ -96,14 +91,9 @@ def create_order(
     shipping_address2: str | None,
 ) -> int:
     """
-    주문, 주문상품, 재고 예약을 하나의 트랜잭션으로 처리합니다.
+    주문, 여러 주문상품, 재고 예약을 하나의 트랜잭션으로 처리합니다.
 
-    처리 순서
-    1. orders 생성
-    2. order_items 생성
-    3. inventories.reserved_quantity 증가
-
-    세 작업 중 하나라도 실패하면 전체 트랜잭션을 롤백합니다.
+    하나라도 실패하면 주문 전체를 롤백합니다.
     """
 
     order_query = text(
@@ -182,16 +172,33 @@ def create_order(
         """
     )
 
+    reduce_cart_query = text(
+        """
+        UPDATE cart_items
+        SET quantity = quantity - :quantity
+        WHERE cart_item_id = :cart_item_id
+          AND quantity > :quantity
+        """
+    )
+
+    delete_cart_query = text(
+        """
+        DELETE FROM cart_items
+        WHERE cart_item_id = :cart_item_id
+          AND quantity = :quantity
+        """
+    )
+
     with engine.begin() as connection:
-        # 1. 주문 생성
+        # 1. 주문 1건 생성
         result = connection.execute(
             order_query,
             {
                 "order_no": order_no,
                 "buyer_user_id": buyer_user_id,
                 "org_id": org_id,
-                "product_amount": item_amount,
-                "total_amount": item_amount,
+                "product_amount": product_amount,
+                "total_amount": product_amount,
                 "receiver_name": receiver_name,
                 "receiver_phone": receiver_phone,
                 "zipcode": zipcode,
@@ -202,39 +209,62 @@ def create_order(
 
         order_id = result.lastrowid
 
-        # 2. 주문 상품 생성
-        connection.execute(
-            item_query,
-            {
-                "order_id": order_id,
-                "product_id": product_id,
-                "variant_id": variant_id,
-                "product_name_snapshot": product_name,
-                "sku_snapshot": sku_code,
-                "quantity": quantity,
-                "unit_price": unit_price,
-                "item_amount": item_amount,
-            },
-        )
-
-        # 3. 주문 수량만큼 재고 예약
-        inventory_result = connection.execute(
-            reserve_inventory_query,
-            {
-                "quantity": quantity,
-                "org_id": org_id,
-                "variant_id": variant_id,
-            },
-        )
-
-        # 서비스에서 먼저 재고를 검사하더라도,
-        # 실제 UPDATE 시점에 재고가 부족해졌다면 주문 전체를 롤백합니다.
-        if inventory_result.rowcount != 1:
-            raise ValueError(
-                "주문 처리 중 재고가 부족해졌거나 재고 정보를 찾을 수 없습니다."
+        # 2. 주문상품을 여러 건 생성하고 각각 재고 예약
+        for item in items:
+            connection.execute(
+                item_query,
+                {
+                    "order_id": order_id,
+                    "product_id": item["product_id"],
+                    "variant_id": item["variant_id"],
+                    "product_name_snapshot": item["product_name"],
+                    "sku_snapshot": item["sku_code"],
+                    "quantity": item["quantity"],
+                    "unit_price": item["unit_price"],
+                    "item_amount": item["item_amount"],
+                },
             )
 
-    return int(order_id)
+            inventory_result = connection.execute(
+                reserve_inventory_query,
+                {
+                    "quantity": item["quantity"],
+                    "org_id": org_id,
+                    "variant_id": item["variant_id"],
+                },
+            )
+
+            if inventory_result.rowcount != 1:
+                raise ValueError(
+                    "주문 처리 중 재고가 부족해졌거나 "
+                    "재고 정보를 찾을 수 없습니다."
+                )
+            cart_item_id = item.get("cart_item_id")
+
+            if cart_item_id is not None:
+                reduce_result = connection.execute(
+                    reduce_cart_query,
+                    {
+                        "cart_item_id": cart_item_id,
+                        "quantity": item["quantity"],
+                    },
+                )
+
+                if reduce_result.rowcount == 0:
+                    delete_result = connection.execute(
+                        delete_cart_query,
+                        {
+                            "cart_item_id": cart_item_id,
+                            "quantity": item["quantity"],
+                        },
+                    )
+
+                    if delete_result.rowcount != 1:
+                        raise ValueError(
+                            "주문 처리 중 장바구니 수량이 변경되었습니다."
+                        )
+                    
+    return order_id
 
 
 def get_orders_by_buyer(buyer_user_id: int) -> list[dict]:

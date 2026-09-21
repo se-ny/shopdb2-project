@@ -1,5 +1,7 @@
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from app.routers.carts import router as carts_router
 
 from app.core.database import check_database_connection
 
@@ -34,7 +36,7 @@ app = FastAPI(
 
 
 app.include_router(products_router)
-
+app.include_router(carts_router)
 app.include_router(orders_router)
 
 

@@ -33,6 +33,41 @@ class PaymentNotFoundError(PaymentServiceError):
 class PaymentValidationError(PaymentServiceError):
     """결제 요청 값이 올바르지 않은 경우."""
 
+def _get_owned_order(
+    db: Session,
+    order_id: int,
+    buyer_user_id: int,
+):
+    order = payment_repository.get_order_for_payment(
+        db,
+        order_id,
+    )
+
+    if order is None:
+        raise PaymentNotFoundError(
+            "주문 정보를 찾을 수 없습니다."
+        )
+
+    if int(order["buyer_user_id"]) != buyer_user_id:
+        raise PaymentValidationError(
+            "다른 구매자의 주문에 대한 결제는 처리할 수 없습니다."
+        )
+
+    return order
+
+
+def _validate_payment_owner(
+    db: Session,
+    payment,
+    buyer_user_id: int,
+):
+    order = _get_owned_order(
+        db,
+        int(payment["order_id"]),
+        buyer_user_id,
+    )
+
+    return order
 
 def _json_to_db(value: Any):
     """
@@ -107,6 +142,7 @@ def _normalize_webhook(row):
 def get_payment(
     db: Session,
     payment_id: int,
+    buyer_user_id: int | None = None,
 ):
     payment = payment_repository.get_payment_by_id(
         db,
@@ -118,13 +154,27 @@ def get_payment(
             "결제 정보를 찾을 수 없습니다."
         )
 
+    if buyer_user_id is not None:
+        _validate_payment_owner(
+            db,
+            payment,
+            buyer_user_id,
+        )
+
     return dict(payment)
 
 
 def get_payments_by_order(
     db: Session,
     order_id: int,
+    buyer_user_id: int,
 ):
+    _get_owned_order(
+        db,
+        order_id,
+        buyer_user_id,
+    )
+
     rows = payment_repository.get_payments_by_order_id(
         db,
         order_id,
@@ -143,8 +193,34 @@ def get_payments_by_order(
 def create_payment(
     db: Session,
     payload: PaymentCreate,
+    buyer_user_id: int,
 ):
     data = payload.model_dump()
+    order = _get_owned_order(
+        db,
+        data["order_id"],
+        buyer_user_id,
+    )
+
+    if order["order_status"] not in {
+        "ORDERED",
+        "PAYMENT_PENDING",
+    }:
+        raise PaymentValidationError(
+            "현재 주문 상태에서는 결제를 생성할 수 없습니다."
+        )
+
+    requested_amount = Decimal(
+        str(data["requested_amount"])
+    )
+    order_total_amount = Decimal(
+        str(order["total_amount"])
+    )
+
+    if requested_amount != order_total_amount:
+        raise PaymentValidationError(
+            "결제 요청 금액이 주문 금액과 일치하지 않습니다."
+        )
 
     payment_key = data.get("payment_key")
 
@@ -218,6 +294,7 @@ def update_payment(
     db: Session,
     payment_id: int,
     payload: PaymentUpdate,
+    buyer_user_id: int | None = None,
 ):
     payment = payment_repository.get_payment_by_id(
         db,
@@ -228,6 +305,11 @@ def update_payment(
         raise PaymentNotFoundError(
             "수정할 결제 정보를 찾을 수 없습니다."
         )
+
+    if buyer_user_id is not None:
+
+        _validate_payment_owner(db, payment, buyer_user_id)
+
 
     data = payload.model_dump(
         exclude_unset=True,
@@ -281,10 +363,43 @@ def update_payment(
 # Payment Transaction
 # =========================================================
 
+def get_payment_transactions(
+    db: Session,
+    payment_id: int,
+    buyer_user_id: int,
+):
+    payment = payment_repository.get_payment_by_id(
+        db,
+        payment_id,
+    )
+
+    if payment is None:
+        raise PaymentNotFoundError(
+            "결제 정보를 찾을 수 없습니다."
+        )
+
+    _validate_payment_owner(
+        db,
+        payment,
+        buyer_user_id,
+    )
+
+    rows = payment_repository.get_transactions_by_payment_id(
+        db,
+        payment_id,
+    )
+
+    return [
+        _normalize_transaction(row)
+        for row in rows
+    ]
+
+
 def create_payment_transaction(
     db: Session,
     payment_id: int,
     payload: PaymentTransactionCreate,
+    buyer_user_id: int,
 ):
     payment = payment_repository.get_payment_by_id(
         db,
@@ -295,6 +410,11 @@ def create_payment_transaction(
         raise PaymentNotFoundError(
             "트랜잭션을 등록할 결제 정보가 없습니다."
         )
+    _validate_payment_owner(
+        db,
+        payment,
+        buyer_user_id,
+    )
 
     data = payload.model_dump()
 
@@ -350,7 +470,23 @@ def create_payment_transaction(
     balance_amount = Decimal(
         str(payment["balance_amount"] or 0)
     )
+    requested_amount = Decimal(
+        str(payment["requested_amount"])
+    )
 
+    if (
+        transaction_type == "APPROVE"
+        and transaction_status == "SUCCESS"
+    ):
+        if payment["payment_status"] == "DONE":
+            raise PaymentValidationError(
+                "이미 승인 완료된 결제입니다."
+            )
+
+        if transaction_amount != requested_amount:
+            raise PaymentValidationError(
+                "승인 금액이 결제 요청 금액과 일치하지 않습니다."
+            )
     # -----------------------------------------
     # 취소 금액 검증
     # -----------------------------------------
