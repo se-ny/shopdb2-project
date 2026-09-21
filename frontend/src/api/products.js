@@ -49,6 +49,10 @@ export function getProduct(productId) {
   return request(`/products/${productId}`);
 }
 
+export function getProductFiles(productId) {
+  return request(`/products/${productId}/files`);
+}
+
 export function createProduct(product) {
   return request("/products", {
     method: "POST",

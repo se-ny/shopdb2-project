@@ -7,7 +7,7 @@ from app.core.deps import get_current_user, CurrentUser
 from app.models.user import User
 from app.schemas.auth import LoginRequest, LoginResponse, MeResponse
 
-router = APIRouter(prefix="/api/auth", tags=["auth"])
+router = APIRouter(prefix="/api/auth", tags=["로그인·인증"])
 
 
 @router.post("/login", response_model=LoginResponse)

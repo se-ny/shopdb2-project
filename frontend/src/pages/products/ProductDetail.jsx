@@ -5,6 +5,7 @@ import {
   deleteProduct,
   deleteProductVariant,
   getProduct,
+  getProductFiles,
   getProductInventory,
   getProductVariants,
   updateProduct,
@@ -47,6 +48,7 @@ export default function ProductDetail({ productId }) {
 
   const [variants, setVariants] = useState([]);
   const [inventory, setInventory] = useState([]);
+  const [productFiles, setProductFiles] = useState([]);
 
   const [inventoryDrafts, setInventoryDrafts] =
     useState({});
@@ -98,10 +100,12 @@ export default function ProductDetail({ productId }) {
           productData,
           variantData,
           inventoryData,
+          fileData,
         ] = await Promise.all([
           getProduct(productId),
           getProductVariants(productId),
           getProductInventory(productId),
+          getProductFiles(productId),
         ]);
 
         if (cancelled) {
@@ -128,6 +132,7 @@ export default function ProductDetail({ productId }) {
 
         setVariants(variantData);
         setInventory(inventoryData);
+        setProductFiles(fileData);
 
         const inventoryDraftData = {};
 
@@ -1248,6 +1253,58 @@ export default function ProductDetail({ productId }) {
           </div>
         )}
       </div>
+
+      <div>
+        <h2>상품 매뉴얼 / 첨부파일</h2>
+
+        {productFiles.length === 0 ? (
+          <p className="product-state">
+            등록된 상품 매뉴얼 또는 첨부파일이 없습니다.
+          </p>
+        ) : (
+          <div>
+            {productFiles.map((file) => (
+              <div
+                key={`${file.product_id}-${file.file_id}`}
+                style={{
+                  padding: "12px 0",
+                  borderBottom: "1px solid #ddd",
+                }}
+              >
+                <p>
+                  <strong>
+                    {file.file_description ||
+                      file.original_file_name}
+                  </strong>
+                </p>
+
+                <p>
+                  파일 구분: {file.file_category}
+                </p>
+
+                <p>
+                  파일명: {file.original_file_name}
+                </p>
+
+                {file.public_url ? (
+                  <a
+                    href={file.public_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    파일 열기
+                  </a>
+                ) : (
+                  <p className="product-state">
+                    연결된 파일 URL이 없습니다.
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <ProductImageManager productId={productId} />
     </section>
   );

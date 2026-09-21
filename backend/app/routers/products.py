@@ -8,7 +8,7 @@ from app.services.product_service import (
 
 router = APIRouter(
     prefix="/api/products",
-    tags=["products"],
+    tags=["상품"],
 )
 
 

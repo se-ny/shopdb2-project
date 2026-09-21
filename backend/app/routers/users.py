@@ -8,7 +8,7 @@ from app.core.deps import require_role, CurrentUser
 from app.models.user import User, Role, UserRole
 from app.schemas.user import UserResponse, UserUpdate, RoleAssign
 
-router = APIRouter(prefix="/api/admin/users", tags=["users"])
+router = APIRouter(prefix="/api/admin/users", tags=["회원관리"])
 
 
 @router.get("", response_model=List[UserResponse])

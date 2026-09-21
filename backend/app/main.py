@@ -13,6 +13,7 @@ from app.routers.orders import router as orders_router
 from app.routers.seller_products import router as seller_products_router
 from app.routers.seller_orders import router as seller_orders_router
 from app.routers.seller_profiles import router as seller_profiles_router
+from app.routers.payments import router as payments_router
 
 from app.routers import org_units, users, roles, policies, ai_providers, rag_documents, rag_query, auth
 
@@ -42,6 +43,7 @@ app.include_router(orders_router)
 app.include_router(seller_products_router)
 app.include_router(seller_orders_router)
 app.include_router(seller_profiles_router)
+app.include_router(payments_router)
 
 
 app.include_router(org_units.router)
