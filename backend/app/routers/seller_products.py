@@ -22,7 +22,7 @@ from app.schemas.product import (
 
 router = APIRouter(
     prefix="/api/seller/products",
-    tags=["상품/판매"],
+    tags=["판매자 상품관리"],
 )
 
 
