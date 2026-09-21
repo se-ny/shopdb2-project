@@ -11,7 +11,7 @@ from app.services.embeddings import get_embedding
 from app.services.chat import get_chat_completion
 from app.services.vector_store import search as vector_search
 
-router = APIRouter(prefix="/api/ai", tags=["ai-query"])
+router = APIRouter(prefix="/api/ai", tags=["AI 질의응답"])
 
 
 @router.post("/query", response_model=RagQueryResponse)

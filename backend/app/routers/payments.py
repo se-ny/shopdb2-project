@@ -28,7 +28,7 @@ from app.services.payment_service import (
 
 router = APIRouter(
     prefix="/api/payments",
-    tags=["결제/PG"],
+    tags=["결제관리"],
 )
 
 

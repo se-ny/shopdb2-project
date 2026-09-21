@@ -11,7 +11,7 @@ from app.services.order_service import (
 
 router = APIRouter(
     prefix="/api/orders",
-    tags=["buyer-orders"],
+    tags=["구매자 주문관리"],
 )
 
 

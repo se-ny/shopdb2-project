@@ -8,7 +8,7 @@ from app.core.deps import require_role, CurrentUser
 from app.models.user import Role
 from app.schemas.user import RoleResponse
 
-router = APIRouter(prefix="/api/admin/roles", tags=["roles"])
+router = APIRouter(prefix="/api/admin/roles", tags=["권한관리"])
 
 
 @router.get("", response_model=List[RoleResponse])
