@@ -4,7 +4,7 @@ from app.core.database import engine
 
 
 def get_sale_products() -> list[dict]:
-    """판매 중이며 활성 카테고리에 속한 상품 목록을 조회합니다."""
+    """판매 중이며 활성 카테고리에 속한 상품 목록과 대표 이미지를 조회합니다."""
 
     query = text(
         """
@@ -17,12 +17,44 @@ def get_sale_products() -> list[dict]:
             p.sale_price,
             p.product_status,
             c.category_id,
-            c.category_name
+            c.category_name,
+
+            (
+                SELECT fa.public_url
+                FROM product_images AS pi
+                JOIN file_assets AS fa
+                    ON fa.file_id = pi.file_id
+                   AND fa.active_yn = 'Y'
+                WHERE pi.product_id = p.product_id
+                  AND pi.image_type = 'MAIN'
+                  AND pi.active_yn = 'Y'
+                ORDER BY pi.display_order, pi.product_image_id
+                LIMIT 1
+            ) AS main_image_url,
+
+            (
+                SELECT COALESCE(
+                    fa.thumbnail_url,
+                    fa.public_url
+                )
+                FROM product_images AS pi
+                JOIN file_assets AS fa
+                    ON fa.file_id = pi.file_id
+                   AND fa.active_yn = 'Y'
+                WHERE pi.product_id = p.product_id
+                  AND pi.image_type = 'MAIN'
+                  AND pi.active_yn = 'Y'
+                ORDER BY pi.display_order, pi.product_image_id
+                LIMIT 1
+            ) AS thumbnail_url
+
         FROM products AS p
         JOIN categories AS c
             ON c.category_id = p.category_id
+
         WHERE p.product_status = 'SALE'
           AND c.active_yn = 'Y'
+
         ORDER BY p.product_id
         """
     )
@@ -66,6 +98,11 @@ def get_product_detail(product_id: int) -> list[dict]:
             i.stock_quantity,
             i.reserved_quantity,
             i.safety_stock,
+            GREATEST(
+                COALESCE(i.stock_quantity, 0) - COALESCE(i.reserved_quantity, 0),
+                0
+            ) AS available_quantity,
+
 
             pi.alt_text,
             fa.public_url,
