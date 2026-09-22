@@ -906,8 +906,73 @@ INSERT INTO `users` (`user_id`, `org_id`, `login_id`, `password_hash`, `user_nam
 	(7, 1, 'buyer96', '$pbkdf2-sha256$29000$lDLm/L/33nsP4TxnTOk9Zw$ygaI2gmuoJbeUAUnb0uoQJEDOfuSgAKcty881EWhpTc', 'Buyer 96', 'buyer96@test.com', '010-9696-9696', 'ACTIVE', '2026-09-09 08:40:15', '2026-09-09 17:40:14'),
 	(8, 1, 'buyer5', '$pbkdf2-sha256$29000$Q8i5NwZgTEkJQeg9JwQghA$BdDKhO3vknx64gUzdAX0tYJTgpeA7pp9m9yft1llim8', '오길동', 'test5@test.com', '010-5555-5555', 'ACTIVE', '2026-09-09 08:41:35', '2026-09-09 17:41:35');
 
+  -- 테이블 shopdb2.inventory_movements 구조 내보내기
+DROP TABLE IF EXISTS `inventory_movements`;
+CREATE TABLE IF NOT EXISTS `inventory_movements` (
+  `movement_id` bigint NOT NULL AUTO_INCREMENT,
+  `inventory_id` bigint NOT NULL,
+  `movement_type` enum('IN','OUT','RESERVE','RELEASE','ADJUST') NOT NULL,
+  `quantity_change` int NOT NULL,
+  `stock_before` int NOT NULL,
+  `stock_after` int NOT NULL,
+  `reserved_before` int NOT NULL DEFAULT '0',
+  `reserved_after` int NOT NULL DEFAULT '0',
+  `reference_type` varchar(50) DEFAULT NULL,
+  `reference_id` bigint DEFAULT NULL,
+  `reason` varchar(500) DEFAULT NULL,
+  `changed_by_user_id` bigint DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`movement_id`),
+  KEY `fk_inventory_movements_user` (`changed_by_user_id`),
+  KEY `idx_inventory_movements_inventory_id` (`inventory_id`),
+  KEY `idx_inventory_movements_reference` (`reference_type`,`reference_id`),
+  KEY `idx_inventory_movements_created_at` (`created_at`),
+  CONSTRAINT `fk_inventory_movements_inventory`
+    FOREIGN KEY (`inventory_id`)
+    REFERENCES `inventories` (`inventory_id`),
+  CONSTRAINT `fk_inventory_movements_user`
+    FOREIGN KEY (`changed_by_user_id`)
+    REFERENCES `users` (`user_id`)
+    ON DELETE SET NULL
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_0900_ai_ci;
+
+
+
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
+-- ============================================================
+-- 구매자 장바구니
+-- 담당: 구매자 기능
+-- ============================================================
+
+CREATE TABLE `carts` (
+  `cart_id` bigint NOT NULL AUTO_INCREMENT COMMENT '장바구니 내부 식별자',
+  `buyer_user_id` bigint NOT NULL COMMENT '장바구니를 소유한 구매자의 users.user_id',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '장바구니 최초 생성 일시',
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '장바구니 최종 변경 일시',
+  PRIMARY KEY (`cart_id`),
+  UNIQUE KEY `uq_carts_buyer_user` (`buyer_user_id`),
+  CONSTRAINT `fk_carts_buyer_user` FOREIGN KEY (`buyer_user_id`) REFERENCES `users` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='구매자별 현재 장바구니';
+
+CREATE TABLE `cart_items` (
+  `cart_item_id` bigint NOT NULL AUTO_INCREMENT COMMENT '장바구니 상품 항목 내부 식별자',
+  `cart_id` bigint NOT NULL COMMENT '해당 항목이 속한 carts.cart_id',
+  `variant_id` bigint NOT NULL COMMENT '구매자가 선택한 상품 옵션의 product_variants.variant_id',
+  `quantity` int NOT NULL COMMENT '장바구니에 담긴 수량. 1 이상만 허용',
+  `unit_price_snapshot` decimal(15,2) NOT NULL COMMENT '장바구니에 담을 당시의 기준단가. 최종 주문가격이 아니며 현재 가격과 비교하기 위한 값',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '해당 상품 옵션을 최초로 담은 일시',
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '해당 장바구니 항목 최종 변경 일시',
+  PRIMARY KEY (`cart_item_id`),
+  UNIQUE KEY `uq_cart_items_cart_variant` (`cart_id`,`variant_id`),
+  KEY `fk_cart_items_variant` (`variant_id`),
+  CONSTRAINT `fk_cart_items_cart` FOREIGN KEY (`cart_id`) REFERENCES `carts` (`cart_id`),
+  CONSTRAINT `fk_cart_items_variant` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`variant_id`),
+  CONSTRAINT `chk_cart_items_quantity` CHECK ((`quantity` > 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='구매자 장바구니의 상품 옵션별 수량 및 담은 시점 가격 정보';
+
 /*!40014 SET FOREIGN_KEY_CHECKS=IFNULL(@OLD_FOREIGN_KEY_CHECKS, 1) */;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40111 SET SQL_NOTES=IFNULL(@OLD_SQL_NOTES, 1) */;
