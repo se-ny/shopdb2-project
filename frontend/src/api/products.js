@@ -100,6 +100,22 @@ export function deleteProduct(
   );
 }
 
+export function restoreProduct(
+  productId,
+  sellerUserId,
+) {
+  const query = new URLSearchParams({
+    seller_user_id: String(sellerUserId),
+  });
+
+  return request(
+    `/products/${productId}/restore?${query.toString()}`,
+    {
+      method: "PATCH",
+    },
+  );
+}
+
 export function getProductVariants(productId) {
   return request(
     `/products/${productId}/variants`,

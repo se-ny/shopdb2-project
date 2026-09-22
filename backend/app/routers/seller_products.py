@@ -485,6 +485,69 @@ def delete_product(
     return None
 
 
+@router.patch(
+    "/{product_id}/restore",
+    response_model=ProductOut,
+)
+def restore_product(
+    product_id: int,
+    seller_user_id: int = Query(..., ge=1),
+    db: Session = Depends(get_db),
+):
+    _require_product_owner(
+        product_id,
+        seller_user_id,
+        db,
+    )
+
+    current = db.execute(
+        text(
+            """
+            SELECT product_status
+            FROM products
+            WHERE product_id = :product_id
+            """
+        ),
+        {"product_id": product_id},
+    ).mappings().first()
+
+    if current is None:
+        raise HTTPException(
+            status_code=404,
+            detail="상품을 찾을 수 없습니다.",
+        )
+
+    if current["product_status"] != "DELETED":
+        raise HTTPException(
+            status_code=400,
+            detail="삭제 상태의 상품만 복원할 수 있습니다.",
+        )
+
+    try:
+        db.execute(
+            text(
+                """
+                UPDATE products
+                SET product_status = 'READY'
+                WHERE product_id = :product_id
+                """
+            ),
+            {"product_id": product_id},
+        )
+
+        db.commit()
+
+    except Exception as exc:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=400,
+            detail=f"상품 복원 실패: {exc}",
+        ) from exc
+
+    return get_product(product_id, db)
+
+
 @router.get(
     "/{product_id}/variants",
     response_model=list[VariantOut],

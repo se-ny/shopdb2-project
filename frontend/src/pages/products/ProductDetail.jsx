@@ -8,6 +8,7 @@ import {
   getProductFiles,
   getProductInventory,
   getProductVariants,
+  restoreProduct,
   updateProduct,
   updateProductInventory,
   updateProductVariant,
@@ -65,6 +66,9 @@ export default function ProductDetail({ productId }) {
     useState(false);
 
   const [deletingProduct, setDeletingProduct] =
+    useState(false);
+
+  const [restoringProduct, setRestoringProduct] =
     useState(false);
 
   const [creatingVariant, setCreatingVariant] =
@@ -329,6 +333,52 @@ export default function ProductDetail({ productId }) {
       );
     } finally {
       setDeletingProduct(false);
+    }
+  }
+
+  async function handleProductRestore() {
+    const confirmed = window.confirm(
+      "이 상품을 복원하시겠습니까?\n복원 후 상품 상태는 판매 준비(READY)로 변경됩니다.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setRestoringProduct(true);
+      setError("");
+      setMessage("");
+
+      if (!product?.seller_user_id) {
+        throw new Error(
+          "판매자 사용자 ID를 확인할 수 없습니다.",
+        );
+      }
+
+      const restored = await restoreProduct(
+        productId,
+        product.seller_user_id,
+      );
+
+      setProduct(restored);
+
+      setProductDraft((current) => ({
+        ...current,
+        product_status:
+          restored.product_status || "READY",
+      }));
+
+      setMessage(
+        "상품이 복원되었습니다. 상품 상태는 판매 준비(READY)입니다.",
+      );
+    } catch (err) {
+      setError(
+        err.message ||
+          "상품 복원에 실패했습니다.",
+      );
+    } finally {
+      setRestoringProduct(false);
     }
   }
 
@@ -836,7 +886,8 @@ export default function ProductDetail({ productId }) {
               onClick={handleProductSave}
               disabled={
                 savingProduct ||
-                deletingProduct
+                deletingProduct ||
+                restoringProduct
               }
             >
               {savingProduct
@@ -844,19 +895,31 @@ export default function ProductDetail({ productId }) {
                 : "상품 저장"}
             </button>
 
-            <button
-              type="button"
-              onClick={handleProductDelete}
-              disabled={
-                deletingProduct ||
-                product.product_status ===
-                  "DELETED"
-              }
-            >
-              {deletingProduct
-                ? "삭제 처리 중..."
-                : "상품 삭제"}
-            </button>
+            {product.product_status !==
+              "DELETED" ? (
+              <button
+                type="button"
+                onClick={handleProductDelete}
+                disabled={
+                  deletingProduct ||
+                  restoringProduct
+                }
+              >
+                {deletingProduct
+                  ? "삭제 처리 중..."
+                  : "상품 삭제"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleProductRestore}
+                disabled={restoringProduct}
+              >
+                {restoringProduct
+                  ? "복원 처리 중..."
+                  : "상품 복원"}
+              </button>
+            )}
           </div>
         </div>
       </div>
