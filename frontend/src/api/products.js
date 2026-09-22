@@ -11,9 +11,11 @@ async function request(url, options = {}) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(
+    const error = new Error(
       errorText || `HTTP ${response.status}`,
     );
+    error.status = response.status;
+    throw error;
   }
 
   if (response.status === 204) {
@@ -49,8 +51,20 @@ export function getProduct(productId) {
   return request(`/products/${productId}`);
 }
 
-export function getProductFiles(productId) {
-  return request(`/products/${productId}/files`);
+export async function getProductFiles(productId) {
+  try {
+    return await request(
+      `/products/${productId}/files`,
+    );
+  } catch (error) {
+    // 현재 백엔드에 /files 조회 API가 없으면
+    // 상품 상세 전체 로딩이 실패하지 않도록 빈 배열로 처리합니다.
+    if (error.status === 404) {
+      return [];
+    }
+
+    throw error;
+  }
 }
 
 export function createProduct(product) {
