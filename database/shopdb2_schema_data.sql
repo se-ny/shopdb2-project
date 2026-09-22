@@ -896,6 +896,40 @@ INSERT INTO `users` (`user_id`, `org_id`, `login_id`, `password_hash`, `user_nam
 	(7, 1, 'buyer96', '$pbkdf2-sha256$29000$lDLm/L/33nsP4TxnTOk9Zw$ygaI2gmuoJbeUAUnb0uoQJEDOfuSgAKcty881EWhpTc', 'Buyer 96', 'buyer96@test.com', '010-9696-9696', 'ACTIVE', '2026-09-09 08:40:15', '2026-09-09 17:40:14'),
 	(8, 1, 'buyer5', '$pbkdf2-sha256$29000$Q8i5NwZgTEkJQeg9JwQghA$BdDKhO3vknx64gUzdAX0tYJTgpeA7pp9m9yft1llim8', '오길동', 'test5@test.com', '010-5555-5555', 'ACTIVE', '2026-09-09 08:41:35', '2026-09-09 17:41:35');
 
+  -- 테이블 shopdb2.inventory_movements 구조 내보내기
+DROP TABLE IF EXISTS `inventory_movements`;
+CREATE TABLE IF NOT EXISTS `inventory_movements` (
+  `movement_id` bigint NOT NULL AUTO_INCREMENT,
+  `inventory_id` bigint NOT NULL,
+  `movement_type` enum('IN','OUT','RESERVE','RELEASE','ADJUST') NOT NULL,
+  `quantity_change` int NOT NULL,
+  `stock_before` int NOT NULL,
+  `stock_after` int NOT NULL,
+  `reserved_before` int NOT NULL DEFAULT '0',
+  `reserved_after` int NOT NULL DEFAULT '0',
+  `reference_type` varchar(50) DEFAULT NULL,
+  `reference_id` bigint DEFAULT NULL,
+  `reason` varchar(500) DEFAULT NULL,
+  `changed_by_user_id` bigint DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`movement_id`),
+  KEY `fk_inventory_movements_user` (`changed_by_user_id`),
+  KEY `idx_inventory_movements_inventory_id` (`inventory_id`),
+  KEY `idx_inventory_movements_reference` (`reference_type`,`reference_id`),
+  KEY `idx_inventory_movements_created_at` (`created_at`),
+  CONSTRAINT `fk_inventory_movements_inventory`
+    FOREIGN KEY (`inventory_id`)
+    REFERENCES `inventories` (`inventory_id`),
+  CONSTRAINT `fk_inventory_movements_user`
+    FOREIGN KEY (`changed_by_user_id`)
+    REFERENCES `users` (`user_id`)
+    ON DELETE SET NULL
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_0900_ai_ci;
+
+
+
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
 -- ============================================================
