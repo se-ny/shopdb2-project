@@ -476,3 +476,54 @@ export async function deactivateCategory(categoryId) {
   });
   return handleResponse(response);
 }
+
+// ---- 원본데이터 관리 ----
+export async function fetchRawTables() {
+  const response = await fetch(`${API_BASE_URL}/api/admin/data/tables`, {
+    headers: authHeader(),
+  });
+  return handleResponse(response);
+}
+
+export async function fetchRawSchema(tableName) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/data/${encodeURIComponent(tableName)}/schema`, {
+    headers: authHeader(),
+  });
+  return handleResponse(response);
+}
+
+export async function fetchRawRows(tableName, page = 1, size = 30) {
+  const query = new URLSearchParams({ page: String(page), size: String(size) });
+  const response = await fetch(
+    `${API_BASE_URL}/api/admin/data/${encodeURIComponent(tableName)}/rows?${query}`,
+    { headers: authHeader() }
+  );
+  return handleResponse(response);
+}
+
+export async function createRawRow(tableName, values) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/data/${encodeURIComponent(tableName)}/rows`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(values),
+  });
+  return handleResponse(response);
+}
+
+export async function updateRawRow(tableName, pk, values) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/data/${encodeURIComponent(tableName)}/rows`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify({ pk, values }),
+  });
+  return handleResponse(response);
+}
+
+export async function deleteRawRow(tableName, pk) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/data/${encodeURIComponent(tableName)}/rows`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify({ pk }),
+  });
+  return handleResponse(response);
+}

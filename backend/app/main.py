@@ -25,6 +25,7 @@ from app.routers import admin_orders
 from app.routers import admin_dashboard
 from app.routers import admin_products
 from app.routers import admin_categories
+from app.routers import admin_data
 
 
 from app.routers import (
@@ -73,6 +74,7 @@ app.include_router(admin_orders.router)
 app.include_router(admin_dashboard.router)
 app.include_router(admin_products.router)
 app.include_router(admin_categories.router)
+app.include_router(admin_data.router)
 
 
 app.add_middleware(

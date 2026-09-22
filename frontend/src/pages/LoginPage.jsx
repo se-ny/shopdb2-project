@@ -25,7 +25,7 @@ function LoginPage() {
       const result = await login(loginId, password);
 
       if (result.roles.includes("ADMIN")) {
-        navigate("/admin/orgs", { replace: true });
+        navigate("/admin", { replace: true });
         return;
       }
 
