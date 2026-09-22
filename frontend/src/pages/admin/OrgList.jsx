@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchOrgs, deactivateOrg } from "../../api/admin";
+import { fetchOrgs, deactivateOrg, activateOrg } from "../../api/admin";
 import OrgForm from "./OrgForm";
 
 function OrgList() {
@@ -47,6 +47,16 @@ function OrgList() {
     }
   }
 
+  async function handleActivate(org) {
+    if (!confirm(`${org.org_name}을(를) 다시 활성화하시겠습니까?`)) return;
+    try {
+      await activateOrg(org.org_id);
+      loadOrgs();
+    } catch (error) {
+      alert(`처리 실패: ${error.message}`);
+    }
+  }
+
   if (loading) return <p>불러오는 중...</p>;
   if (errorMessage) return <p className="error-message">{errorMessage}</p>;
 
@@ -86,8 +96,10 @@ function OrgList() {
               <td>{org.active_yn === "Y" ? "활성" : "비활성"}</td>
               <td>
                 <button onClick={() => handleEditClick(org)}>수정</button>
-                {org.active_yn === "Y" && (
+                {org.active_yn === "Y" ? (
                   <button onClick={() => handleDeactivate(org)}>비활성화</button>
+                ) : (
+                  <button onClick={() => handleActivate(org)}>활성화</button>
                 )}
               </td>
             </tr>

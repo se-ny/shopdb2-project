@@ -372,3 +372,58 @@ def get_order_items(order_id: int) -> list[dict]:
         ).mappings().all()
 
     return [dict(row) for row in rows]
+
+def list_orders_admin(
+    order_status: str | None = None,
+    org_id: int | None = None,
+    skip: int = 0,
+    limit: int = 20,
+) -> tuple[list[dict], int]:
+    """
+    관리자용 전체 주문 목록을 조회합니다.
+    """
+
+    conditions = []
+    params = {"skip": skip, "limit": limit}
+
+    if order_status:
+        conditions.append("o.order_status = :order_status")
+        params["order_status"] = order_status
+
+    if org_id:
+        conditions.append("o.org_id = :org_id")
+        params["org_id"] = org_id
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    query = text(
+        f"""
+        SELECT
+            o.order_id, o.order_no, o.buyer_user_id, u.user_name AS buyer_name,
+            o.org_id, org.org_name, o.order_status,
+            o.total_amount, o.ordered_at
+        FROM orders o
+        JOIN users u ON u.user_id = o.buyer_user_id
+        JOIN org_units org ON org.org_id = o.org_id
+        {where_clause}
+        ORDER BY o.order_id DESC
+        LIMIT :limit OFFSET :skip
+        """
+    )
+
+    count_query = text(
+        f"""
+        SELECT COUNT(*)
+        FROM orders o
+        {where_clause}
+        """
+    )
+
+    with engine.connect() as connection:
+        rows = connection.execute(query, params).mappings().all()
+        total = connection.execute(
+            count_query,
+            {k: v for k, v in params.items() if k not in ("skip", "limit")},
+        ).scalar()
+
+    return [dict(row) for row in rows], total

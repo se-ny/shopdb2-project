@@ -16,6 +16,15 @@ from app.routers.seller_profiles import router as seller_profiles_router
 from app.routers.payments import router as payments_router
 
 from app.routers import org_units, users, roles, policies, ai_providers, rag_documents, rag_query, auth
+from app.routers import admin_payments
+from app.routers import admin_payments, admin_logs
+from app.routers import admin_alerts
+from app.routers import ai_feedback
+from app.routers import admin_sql_agent
+from app.routers import admin_orders
+from app.routers import admin_dashboard
+from app.routers import admin_products
+
 
 from app.routers import (
     ai_providers,
@@ -53,8 +62,16 @@ app.include_router(policies.router)
 app.include_router(ai_providers.router)
 app.include_router(rag_documents.router)
 app.include_router(rag_query.router)
-
+app.include_router(admin_payments.router)
+app.include_router(admin_logs.router)
+app.include_router(admin_alerts.router)
+app.include_router(ai_feedback.router)
+app.include_router(admin_sql_agent.router)
 app.include_router(auth.router)
+app.include_router(admin_orders.router)
+app.include_router(admin_dashboard.router)
+app.include_router(admin_products.router)
+
 
 app.add_middleware(
     CORSMiddleware,

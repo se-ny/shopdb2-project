@@ -14,8 +14,53 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
+-- 테이블 shopdb2.admin_action_logs 구조 내보내기
+CREATE TABLE IF NOT EXISTS `admin_action_logs` (
+  `log_id` bigint NOT NULL AUTO_INCREMENT,
+  `log_code` varchar(50) NOT NULL,
+  `admin_user_id` bigint NOT NULL,
+  `org_id` bigint DEFAULT NULL,
+  `action_type` enum('ROLE_ASSIGN','ROLE_REVOKE','POLICY_CREATE','POLICY_EXPIRE','ORG_UPDATE','ORG_DEACTIVATE','PAYMENT_FORCE_CANCEL','REFUND_APPROVE','REFUND_REJECT') NOT NULL,
+  `target_table` varchar(50) NOT NULL,
+  `target_id` bigint DEFAULT NULL,
+  `before_value` json DEFAULT NULL,
+  `after_value` json DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`log_id`),
+  UNIQUE KEY `log_code` (`log_code`),
+  KEY `fk_action_log_admin` (`admin_user_id`),
+  KEY `fk_action_log_org` (`org_id`),
+  CONSTRAINT `fk_action_log_admin` FOREIGN KEY (`admin_user_id`) REFERENCES `users` (`user_id`),
+  CONSTRAINT `fk_action_log_org` FOREIGN KEY (`org_id`) REFERENCES `org_units` (`org_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 테이블 데이터 shopdb2.admin_action_logs:~0 rows (대략적) 내보내기
+DELETE FROM `admin_action_logs`;
+
+-- 테이블 shopdb2.admin_alerts 구조 내보내기
+CREATE TABLE IF NOT EXISTS `admin_alerts` (
+  `alert_id` bigint NOT NULL AUTO_INCREMENT,
+  `alert_code` varchar(50) NOT NULL,
+  `org_id` bigint DEFAULT NULL,
+  `alert_type` enum('LOW_STOCK','WEBHOOK_FAILED','REFUND_DELAYED') NOT NULL,
+  `target_table` varchar(50) NOT NULL,
+  `target_id` bigint DEFAULT NULL,
+  `severity` enum('INFO','WARNING','CRITICAL') DEFAULT 'WARNING',
+  `resolved_yn` char(1) DEFAULT 'N',
+  `resolved_by` bigint DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`alert_id`),
+  UNIQUE KEY `alert_code` (`alert_code`),
+  KEY `fk_alert_org` (`org_id`),
+  KEY `fk_alert_resolver` (`resolved_by`),
+  CONSTRAINT `fk_alert_org` FOREIGN KEY (`org_id`) REFERENCES `org_units` (`org_id`),
+  CONSTRAINT `fk_alert_resolver` FOREIGN KEY (`resolved_by`) REFERENCES `users` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 테이블 데이터 shopdb2.admin_alerts:~0 rows (대략적) 내보내기
+DELETE FROM `admin_alerts`;
+
 -- 테이블 shopdb2.ai_providers 구조 내보내기
-DROP TABLE IF EXISTS `ai_providers`;
 CREATE TABLE IF NOT EXISTS `ai_providers` (
   `provider_id` bigint NOT NULL AUTO_INCREMENT,
   `provider_code` varchar(50) NOT NULL,
@@ -28,17 +73,35 @@ CREATE TABLE IF NOT EXISTS `ai_providers` (
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`provider_id`),
   UNIQUE KEY `provider_code` (`provider_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- 테이블 데이터 shopdb2.ai_providers:~3 rows (대략적) 내보내기
 DELETE FROM `ai_providers`;
 INSERT INTO `ai_providers` (`provider_id`, `provider_code`, `provider_name`, `provider_type`, `base_url`, `chat_model`, `embedding_model`, `active_yn`, `created_at`) VALUES
 	(1, 'OPENAI', 'OpenAI API', 'CLOUD', 'https://api.openai.com', 'OPENAI_CHAT_MODEL', 'text-embedding-3-small', 'Y', '2026-09-09 16:22:31'),
 	(2, 'GEMINI', 'Google Gemini API', 'CLOUD', 'https://generativelanguage.googleapis.com', 'GEMINI_CHAT_MODEL', 'GEMINI_EMBEDDING_MODEL', 'Y', '2026-09-09 16:22:31'),
-	(3, 'OLLAMA', 'Local Ollama', 'LOCAL', 'http://localhost:11434', 'LOCAL_LLM', 'nomic-embed-text', 'Y', '2026-09-09 16:22:31');
+	(3, 'OLLAMA', 'Local Ollama', 'LOCAL', 'http://localhost:11434', 'llama3.2', 'nomic-embed-text', 'Y', '2026-09-09 16:22:31');
+
+-- 테이블 shopdb2.ai_response_feedback 구조 내보내기
+CREATE TABLE IF NOT EXISTS `ai_response_feedback` (
+  `feedback_id` bigint NOT NULL AUTO_INCREMENT,
+  `feedback_code` varchar(50) NOT NULL,
+  `source_type` enum('RAG','SQL_AGENT') NOT NULL,
+  `source_log_id` bigint NOT NULL,
+  `user_id` bigint DEFAULT NULL,
+  `feedback_score` enum('GOOD','BAD') NOT NULL,
+  `feedback_reason` varchar(500) DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`feedback_id`),
+  UNIQUE KEY `feedback_code` (`feedback_code`),
+  KEY `fk_feedback_user` (`user_id`),
+  CONSTRAINT `fk_feedback_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 테이블 데이터 shopdb2.ai_response_feedback:~0 rows (대략적) 내보내기
+DELETE FROM `ai_response_feedback`;
 
 -- 테이블 shopdb2.buyer_inquiries 구조 내보내기
-DROP TABLE IF EXISTS `buyer_inquiries`;
 CREATE TABLE IF NOT EXISTS `buyer_inquiries` (
   `inquiry_id` bigint NOT NULL AUTO_INCREMENT,
   `user_id` bigint NOT NULL,
@@ -60,19 +123,12 @@ CREATE TABLE IF NOT EXISTS `buyer_inquiries` (
   CONSTRAINT `buyer_inquiries_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`),
   CONSTRAINT `buyer_inquiries_ibfk_2` FOREIGN KEY (`org_id`) REFERENCES `org_units` (`org_id`),
   CONSTRAINT `buyer_inquiries_ibfk_3` FOREIGN KEY (`answered_by_user_id`) REFERENCES `users` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.buyer_inquiries:~5 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.buyer_inquiries:~0 rows (대략적) 내보내기
 DELETE FROM `buyer_inquiries`;
-INSERT INTO `buyer_inquiries` (`inquiry_id`, `user_id`, `org_id`, `category_code`, `title`, `content`, `inquiry_status`, `secret_yn`, `answer_content`, `answered_by_user_id`, `created_at`, `updated_at`, `answered_at`) VALUES
-	(1, 4, 2, 'PRODUCT', 'AI 개발용 노트북 재고 문의', 'AI 개발용 노트북 32GB RAM 모델의 현재 재고와 배송 가능일을 알고 싶습니다.', 'ANSWERED', 'N', '현재 재고가 있으며 주문 완료 후 순차적으로 배송됩니다.', 1, '2026-09-01 10:00:00', '2026-09-01 11:00:00', '2026-09-01 11:00:00'),
-	(2, 5, 3, 'DELIVERY', '부산지역 배송일 문의', '부산 해운대구까지 주문 후 배송에 며칠 정도 소요되는지 문의합니다.', 'ANSWERED', 'N', '결제 완료 후 평균 2~3영업일 정도 소요됩니다.', 1, '2026-09-02 09:30:00', '2026-09-02 10:30:00', '2026-09-02 10:30:00'),
-	(3, 6, 1, 'PAYMENT', 'Toss 결제 확인 요청', 'Toss Payments로 결제했는데 주문 상태가 결제완료로 표시되는지 확인 부탁드립니다.', 'ANSWERED', 'Y', '결제 내역을 확인했으며 정상적으로 승인되었습니다.', 1, '2026-09-03 14:00:00', '2026-09-03 14:40:00', '2026-09-03 14:40:00'),
-	(4, 7, 1, 'REFUND', '상품 환불 가능 기간 문의', '상품을 받은 후 며칠까지 환불 신청이 가능한지 알고 싶습니다.', 'ANSWERED', 'N', '2026년 환불 정책 기준으로 미개봉 상품은 수령 후 14일 이내 신청 가능합니다.', 1, '2026-09-04 13:10:00', '2026-09-04 14:00:00', '2026-09-04 14:00:00'),
-	(5, 8, 1, 'ETC', 'AI 상품 추천 기능 문의', '구매 이력을 기반으로 AI가 상품을 추천하는 기능이 제공되는지 궁금합니다.', 'RECEIVED', 'N', NULL, NULL, '2026-09-05 15:20:00', '2026-09-05 15:20:00', NULL);
 
 -- 테이블 shopdb2.categories 구조 내보내기
-DROP TABLE IF EXISTS `categories`;
 CREATE TABLE IF NOT EXISTS `categories` (
   `category_id` bigint NOT NULL AUTO_INCREMENT,
   `parent_category_id` bigint DEFAULT NULL,
@@ -96,7 +152,6 @@ INSERT INTO `categories` (`category_id`, `parent_category_id`, `category_name`, 
 	(6, 2, '신발', 2, 2, 'Y');
 
 -- 테이블 shopdb2.company_policies 구조 내보내기
-DROP TABLE IF EXISTS `company_policies`;
 CREATE TABLE IF NOT EXISTS `company_policies` (
   `policy_id` bigint NOT NULL AUTO_INCREMENT,
   `org_id` bigint DEFAULT NULL,
@@ -113,7 +168,7 @@ CREATE TABLE IF NOT EXISTS `company_policies` (
   UNIQUE KEY `uk_policy_version` (`policy_code`,`policy_version`),
   KEY `fk_company_policy_org` (`org_id`),
   CONSTRAINT `fk_company_policy_org` FOREIGN KEY (`org_id`) REFERENCES `org_units` (`org_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- 테이블 데이터 shopdb2.company_policies:~3 rows (대략적) 내보내기
 DELETE FROM `company_policies`;
@@ -123,7 +178,6 @@ INSERT INTO `company_policies` (`policy_id`, `org_id`, `policy_code`, `policy_na
 	(3, 1, 'TERMS', '쇼핑몰 이용약관', '2026.1', 'TERMS', '2026년 스마트쇼핑 이용약관입니다.', '2026-01-01', NULL, 'Y', '2026-09-09 16:22:31');
 
 -- 테이블 shopdb2.file_assets 구조 내보내기
-DROP TABLE IF EXISTS `file_assets`;
 CREATE TABLE IF NOT EXISTS `file_assets` (
   `file_id` bigint NOT NULL AUTO_INCREMENT,
   `org_id` bigint DEFAULT NULL,
@@ -144,9 +198,9 @@ CREATE TABLE IF NOT EXISTS `file_assets` (
   KEY `fk_file_org` (`org_id`),
   KEY `idx_file_public_url` (`public_url`(255)),
   CONSTRAINT `fk_file_org` FOREIGN KEY (`org_id`) REFERENCES `org_units` (`org_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.file_assets:~9 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.file_assets:~8 rows (대략적) 내보내기
 DELETE FROM `file_assets`;
 INSERT INTO `file_assets` (`file_id`, `org_id`, `file_type`, `storage_type`, `original_file_name`, `stored_file_name`, `file_extension`, `mime_type`, `file_size`, `storage_path`, `public_url`, `thumbnail_url`, `checksum_sha256`, `active_yn`, `created_at`) VALUES
 	(1, 1, 'IMAGE', 'URL', 'notebook_2024.jpg', NULL, 'jpg', 'image/jpeg', 0, NULL, 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853', 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400', NULL, 'Y', '2024-01-10 10:00:00'),
@@ -155,12 +209,9 @@ INSERT INTO `file_assets` (`file_id`, `org_id`, `file_type`, `storage_type`, `or
 	(4, 3, 'IMAGE', 'URL', 'running_2025.jpg', NULL, 'jpg', 'image/jpeg', 0, NULL, 'https://images.unsplash.com/photo-1542291026-7eec264c27ff', 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400', NULL, 'Y', '2025-06-01 10:00:00'),
 	(5, 1, 'IMAGE', 'URL', 'ai_laptop_2026.jpg', NULL, 'jpg', 'image/jpeg', 0, NULL, 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8', 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400', NULL, 'Y', '2026-01-05 10:00:00'),
 	(6, 1, 'PDF', 'LOCAL', 'ai_notebook_manual.pdf', '2024_ai_notebook_manual.pdf', 'pdf', 'application/pdf', 0, '/uploads/products/2024/ai_notebook_manual.pdf', 'https://shop.example.com/uploads/products/2024/ai_notebook_manual.pdf', NULL, NULL, 'Y', '2024-01-10 11:00:00'),
-	(7, 1, 'PDF', 'S3', 'ai_workstation_manual.pdf', '2026_ai_workstation_manual.pdf', 'pdf', 'application/pdf', 0, 'products/2026/ai_workstation_manual.pdf', 'https://cdn.example.com/products/2026/ai_workstation_manual.pdf', NULL, NULL, 'Y', '2026-01-05 11:00:00'),
-	(8, 2, 'IMAGE', 'LOCAL', '01_02_상의_언더아머.png', '04022583fb5a487da8156a2c3a63761c.png', 'png', 'image/png', 135074, '2026/09/04022583fb5a487da8156a2c3a63761c.png', '/uploads/2026/09/04022583fb5a487da8156a2c3a63761c.png', '/uploads/2026/09/04022583fb5a487da8156a2c3a63761c.png', '4522b1921bf732045bd16f1269a240bd3ce76d9fe957915898d03f0c071a31ea', 'Y', '2026-09-14 14:18:04'),
-	(9, 2, 'IMAGE', 'LOCAL', '01_상의_언더아머.png', '8ead88e622e2457285040bfcf2d19414.png', 'png', 'image/png', 159908, '2026/09/8ead88e622e2457285040bfcf2d19414.png', '/uploads/2026/09/8ead88e622e2457285040bfcf2d19414.png', '/uploads/2026/09/8ead88e622e2457285040bfcf2d19414.png', 'd1bfc357be0b0cc56e0da05f78a1288881cd8d30c4af16d33dac20bc1f2171fc', 'Y', '2026-09-14 14:18:04');
+	(7, 1, 'PDF', 'S3', 'ai_workstation_manual.pdf', '2026_ai_workstation_manual.pdf', 'pdf', 'application/pdf', 0, 'products/2026/ai_workstation_manual.pdf', 'https://cdn.example.com/products/2026/ai_workstation_manual.pdf', NULL, NULL, 'Y', '2026-01-05 11:00:00');
 
 -- 테이블 shopdb2.inquiry_files 구조 내보내기
-DROP TABLE IF EXISTS `inquiry_files`;
 CREATE TABLE IF NOT EXISTS `inquiry_files` (
   `inquiry_file_id` bigint NOT NULL AUTO_INCREMENT,
   `inquiry_id` bigint NOT NULL,
@@ -171,19 +222,12 @@ CREATE TABLE IF NOT EXISTS `inquiry_files` (
   KEY `file_id` (`file_id`),
   CONSTRAINT `inquiry_files_ibfk_1` FOREIGN KEY (`inquiry_id`) REFERENCES `buyer_inquiries` (`inquiry_id`),
   CONSTRAINT `inquiry_files_ibfk_2` FOREIGN KEY (`file_id`) REFERENCES `file_assets` (`file_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.inquiry_files:~5 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.inquiry_files:~1 rows (대략적) 내보내기
 DELETE FROM `inquiry_files`;
-INSERT INTO `inquiry_files` (`inquiry_file_id`, `inquiry_id`, `file_id`, `created_at`) VALUES
-	(1, 1, 6, '2026-09-01 10:01:00'),
-	(2, 2, 6, '2026-09-02 09:31:00'),
-	(3, 3, 7, '2026-09-03 14:01:00'),
-	(4, 4, 7, '2026-09-04 13:11:00'),
-	(5, 5, 6, '2026-09-05 15:21:00');
 
 -- 테이블 shopdb2.inventories 구조 내보내기
-DROP TABLE IF EXISTS `inventories`;
 CREATE TABLE IF NOT EXISTS `inventories` (
   `inventory_id` bigint NOT NULL AUTO_INCREMENT,
   `org_id` bigint NOT NULL,
@@ -197,9 +241,9 @@ CREATE TABLE IF NOT EXISTS `inventories` (
   KEY `fk_inventory_variant` (`variant_id`),
   CONSTRAINT `fk_inventory_org` FOREIGN KEY (`org_id`) REFERENCES `org_units` (`org_id`),
   CONSTRAINT `fk_inventory_variant` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`variant_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.inventories:~9 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.inventories:~8 rows (대략적) 내보내기
 DELETE FROM `inventories`;
 INSERT INTO `inventories` (`inventory_id`, `org_id`, `variant_id`, `stock_quantity`, `reserved_quantity`, `safety_stock`, `updated_at`) VALUES
 	(1, 1, 1, 29, 2, 5, '2026-09-09 18:43:21'),
@@ -207,13 +251,11 @@ INSERT INTO `inventories` (`inventory_id`, `org_id`, `variant_id`, `stock_quanti
 	(3, 1, 3, 49, 3, 10, '2026-09-09 18:43:29'),
 	(4, 2, 4, 100, 5, 20, '2026-09-09 16:22:31'),
 	(5, 2, 5, 80, 3, 20, '2026-09-09 16:22:31'),
-	(6, 3, 6, 58, 3, 10, '2026-09-14 14:14:05'),
+	(6, 3, 6, 60, 2, 10, '2026-09-09 16:22:31'),
 	(7, 1, 7, 17, 1, 5, '2026-09-09 17:53:09'),
-	(8, 1, 8, 10, 1, 3, '2026-09-09 16:22:31'),
-	(9, 2, 9, 10, 0, 2, '2026-09-14 14:18:04');
+	(8, 1, 8, 10, 1, 3, '2026-09-09 16:22:31');
 
 -- 테이블 shopdb2.order_items 구조 내보내기
-DROP TABLE IF EXISTS `order_items`;
 CREATE TABLE IF NOT EXISTS `order_items` (
   `order_item_id` bigint NOT NULL AUTO_INCREMENT,
   `order_id` bigint NOT NULL,
@@ -232,9 +274,9 @@ CREATE TABLE IF NOT EXISTS `order_items` (
   CONSTRAINT `fk_order_item_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`),
   CONSTRAINT `fk_order_item_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`),
   CONSTRAINT `fk_order_item_variant` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`variant_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.order_items:~14 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.order_items:~11 rows (대략적) 내보내기
 DELETE FROM `order_items`;
 INSERT INTO `order_items` (`order_item_id`, `order_id`, `product_id`, `variant_id`, `product_name_snapshot`, `sku_snapshot`, `quantity`, `unit_price`, `item_amount`, `item_status`) VALUES
 	(1, 1, 1, 1, 'AI 개발용 노트북', 'SKU-NOTE-16', 1, 1690000.00, 1690000.00, 'COMPLETED'),
@@ -247,13 +289,9 @@ INSERT INTO `order_items` (`order_item_id`, `order_id`, `product_id`, `variant_i
 	(8, 8, 5, 7, 'AI Workstation Laptop', 'SKU-AI-32', 1, 2290000.00, 2290000.00, 'ORDERED'),
 	(9, 9, 5, 7, 'AI Workstation Laptop', 'SKU-AI-32', 1, 2290000.00, 2290000.00, 'ORDERED'),
 	(10, 10, 1, 1, 'AI 개발용 노트북', 'SKU-NOTE-16', 1, 1690000.00, 1690000.00, 'ORDERED'),
-	(11, 11, 2, 3, '스마트폰 Pro', 'SKU-PHONE-BLK', 1, 1100000.00, 1100000.00, 'ORDERED'),
-	(12, 12, 4, 6, '스마트 러닝화', 'SKU-RUN-270', 1, 129000.00, 129000.00, 'PAID'),
-	(13, 13, 4, 6, '스마트 러닝화', 'SKU-RUN-270', 1, 129000.00, 129000.00, 'PAID'),
-	(14, 14, 4, 6, '스마트 러닝화', 'SKU-RUN-270', 1, 129000.00, 129000.00, 'ORDERED');
+	(11, 11, 2, 3, '스마트폰 Pro', 'SKU-PHONE-BLK', 1, 1100000.00, 1100000.00, 'ORDERED');
 
 -- 테이블 shopdb2.orders 구조 내보내기
-DROP TABLE IF EXISTS `orders`;
 CREATE TABLE IF NOT EXISTS `orders` (
   `order_id` bigint NOT NULL AUTO_INCREMENT,
   `order_no` varchar(64) NOT NULL,
@@ -278,9 +316,9 @@ CREATE TABLE IF NOT EXISTS `orders` (
   KEY `idx_orders_org` (`org_id`),
   CONSTRAINT `fk_orders_buyer` FOREIGN KEY (`buyer_user_id`) REFERENCES `users` (`user_id`),
   CONSTRAINT `fk_orders_org` FOREIGN KEY (`org_id`) REFERENCES `org_units` (`org_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.orders:~14 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.orders:~11 rows (대략적) 내보내기
 DELETE FROM `orders`;
 INSERT INTO `orders` (`order_id`, `order_no`, `buyer_user_id`, `org_id`, `order_status`, `product_amount`, `discount_amount`, `shipping_amount`, `total_amount`, `receiver_name`, `receiver_phone`, `zipcode`, `shipping_address1`, `shipping_address2`, `ordered_at`, `updated_at`) VALUES
 	(1, 'ORD-2024-0001', 4, 1, 'COMPLETED', 1690000.00, 100000.00, 0.00, 1590000.00, '구매자김', '010-4444-4444', NULL, '전북특별자치도 전주시', '101동 101호', '2024-03-15 10:10:00', '2026-09-09 16:22:31'),
@@ -293,13 +331,9 @@ INSERT INTO `orders` (`order_id`, `order_no`, `buyer_user_id`, `org_id`, `order_
 	(8, 'ORD-20260909-30B78244', 7, 1, 'PAYMENT_PENDING', 2290000.00, 0.00, 0.00, 2290000.00, 'Buyer 96', '010-9696-9696', '06236', 'Seoul', 'Test', '2026-09-09 08:52:42', '2026-09-09 17:52:42'),
 	(9, 'ORD-20260909-5AAE3A81', 7, 1, 'PAID', 2290000.00, 0.00, 0.00, 2290000.00, 'Buyer 96', '010-9696-9696', '06236', 'Seoul', 'Test', '2026-09-09 08:53:10', '2026-09-09 08:53:10'),
 	(10, 'ORD-20260909-D5381C18', 8, 1, 'PAID', 1690000.00, 0.00, 0.00, 1690000.00, '오길동', '010-5555-5555', '06000', '스마트쇼핑 본사', 'Online order address', '2026-09-09 09:43:21', '2026-09-09 09:47:41'),
-	(11, 'ORD-20260909-09D77DAE', 8, 1, 'PAID', 1100000.00, 0.00, 0.00, 1100000.00, '오길동', '010-5555-5555', '06000', '스마트쇼핑 본사', 'Online order address', '2026-09-09 09:43:30', '2026-09-09 09:47:45'),
-	(12, 'ORD-20260914-6A573C88', 4, 3, 'PAID', 129000.00, 0.00, 0.00, 129000.00, '구매자김', '010-4444-4444', '06000', '스마트쇼핑 전주지사', 'Online order address', '2026-09-14 03:41:01', '2026-09-14 03:41:01'),
-	(13, 'ORD-20260914-F2EDCD47', 4, 3, 'PAID', 129000.00, 0.00, 0.00, 129000.00, '구매자김', '010-4444-4444', '06000', '스마트쇼핑 전주지사', 'Online order address', '2026-09-14 03:41:03', '2026-09-14 03:41:03'),
-	(14, 'ORD-20260914-43765F74', 3, 3, 'PAYMENT_PENDING', 129000.00, 0.00, 0.00, 129000.00, '수령인1', '010-1111-1111', '11', '11', '11', '2026-09-14 05:14:05', '2026-09-14 14:14:05');
+	(11, 'ORD-20260909-09D77DAE', 8, 1, 'PAID', 1100000.00, 0.00, 0.00, 1100000.00, '오길동', '010-5555-5555', '06000', '스마트쇼핑 본사', 'Online order address', '2026-09-09 09:43:30', '2026-09-09 09:47:45');
 
 -- 테이블 shopdb2.org_units 구조 내보내기
-DROP TABLE IF EXISTS `org_units`;
 CREATE TABLE IF NOT EXISTS `org_units` (
   `org_id` bigint NOT NULL AUTO_INCREMENT,
   `parent_org_id` bigint DEFAULT NULL,
@@ -320,17 +354,16 @@ CREATE TABLE IF NOT EXISTS `org_units` (
   UNIQUE KEY `org_code` (`org_code`),
   KEY `fk_org_parent` (`parent_org_id`),
   CONSTRAINT `fk_org_parent` FOREIGN KEY (`parent_org_id`) REFERENCES `org_units` (`org_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- 테이블 데이터 shopdb2.org_units:~3 rows (대략적) 내보내기
 DELETE FROM `org_units`;
 INSERT INTO `org_units` (`org_id`, `parent_org_id`, `org_code`, `org_name`, `org_type`, `business_number`, `representative_name`, `phone`, `email`, `zipcode`, `address1`, `address2`, `active_yn`, `created_at`, `updated_at`) VALUES
-	(1, NULL, 'HQ001', '스마트쇼핑 본사', 'HEADQUARTER', '111-11-11111', '홍길동', '02-1111-1111', 'hq@smartshop.co.kr', NULL, '서울특별시 강남구', NULL, 'Y', '2024-01-01 09:00:00', '2026-09-09 16:22:31'),
+	(1, NULL, 'HQ001', '스마트쇼핑 본사', 'HEADQUARTER', '111-11-11111', '홍길동', '02-1111-1111', 'hq@smartshop.co.kr', '', '서울특별시 강남구', '', 'Y', '2024-01-01 09:00:00', '2026-09-18 16:05:10'),
 	(2, 1, 'BR001', '스마트쇼핑 전주지사', 'BRANCH', '111-11-11112', '김전주', '063-111-1111', 'jeonju@smartshop.co.kr', NULL, '전북특별자치도 전주시', NULL, 'Y', '2024-01-01 09:00:00', '2026-09-09 16:22:31'),
-	(3, 1, 'BR002', '스마트쇼핑 부산지사', 'BRANCH', '111-11-11113', '이부산', '051-111-1111', 'busan@smartshop.co.kr', NULL, '부산광역시 해운대구', NULL, 'Y', '2025-01-01 09:00:00', '2026-09-09 16:22:31');
+	(3, 1, 'BR002', '스마트쇼핑 부산지사', 'BRANCH', '111-11-11113', '이부산', '051-111-1111', 'busan@smartshop.co.kr', NULL, '부산광역시 해운대구', NULL, 'Y', '2025-01-01 09:00:00', '2026-09-16 14:21:05');
 
 -- 테이블 shopdb2.payment_transactions 구조 내보내기
-DROP TABLE IF EXISTS `payment_transactions`;
 CREATE TABLE IF NOT EXISTS `payment_transactions` (
   `transaction_id` bigint NOT NULL AUTO_INCREMENT,
   `payment_id` bigint NOT NULL,
@@ -347,9 +380,9 @@ CREATE TABLE IF NOT EXISTS `payment_transactions` (
   PRIMARY KEY (`transaction_id`),
   KEY `fk_transaction_payment` (`payment_id`),
   CONSTRAINT `fk_transaction_payment` FOREIGN KEY (`payment_id`) REFERENCES `payments` (`payment_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.payment_transactions:~3 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.payment_transactions:~4 rows (대략적) 내보내기
 DELETE FROM `payment_transactions`;
 INSERT INTO `payment_transactions` (`transaction_id`, `payment_id`, `transaction_key`, `transaction_type`, `transaction_status`, `transaction_amount`, `pg_transaction_id`, `idempotency_key`, `cancel_reason`, `request_json`, `response_json`, `created_at`) VALUES
 	(1, 1, 'TXKEY-2024-001', 'APPROVE', 'SUCCESS', 1590000.00, 'TOSS-TX-2024-001', 'IDEMP-2024-001', NULL, '{"amount": 1590000, "orderId": "ORD-2024-0001", "paymentKey": "toss_payment_2024_001"}', '{"status": "DONE"}', '2024-03-15 10:12:00'),
@@ -357,7 +390,6 @@ INSERT INTO `payment_transactions` (`transaction_id`, `payment_id`, `transaction
 	(3, 5, 'TXKEY-2026-001', 'APPROVE', 'SUCCESS', 2090000.00, 'TOSS-TX-2026-001', 'IDEMP-2026-001', NULL, '{"amount": 2090000, "orderId": "ORD-2026-0001", "paymentKey": "toss_payment_2026_001"}', '{"status": "DONE"}', '2026-01-20 09:32:00');
 
 -- 테이블 shopdb2.payment_webhook_events 구조 내보내기
-DROP TABLE IF EXISTS `payment_webhook_events`;
 CREATE TABLE IF NOT EXISTS `payment_webhook_events` (
   `webhook_id` bigint NOT NULL AUTO_INCREMENT,
   `payment_id` bigint DEFAULT NULL,
@@ -372,16 +404,15 @@ CREATE TABLE IF NOT EXISTS `payment_webhook_events` (
   PRIMARY KEY (`webhook_id`),
   KEY `fk_webhook_payment` (`payment_id`),
   CONSTRAINT `fk_webhook_payment` FOREIGN KEY (`payment_id`) REFERENCES `payments` (`payment_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.payment_webhook_events:~2 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.payment_webhook_events:~3 rows (대략적) 내보내기
 DELETE FROM `payment_webhook_events`;
 INSERT INTO `payment_webhook_events` (`webhook_id`, `payment_id`, `pg_provider`, `event_type`, `event_id`, `payload_json`, `processed_yn`, `error_message`, `received_at`, `processed_at`) VALUES
 	(1, 1, 'TOSS', 'PAYMENT_STATUS_CHANGED', 'WEBHOOK-2024-001', '{"status": "DONE", "paymentKey": "toss_payment_2024_001"}', 'Y', NULL, '2024-03-15 10:12:10', '2024-03-15 10:12:11'),
 	(2, 5, 'TOSS', 'PAYMENT_STATUS_CHANGED', 'WEBHOOK-2026-001', '{"status": "DONE", "paymentKey": "toss_payment_2026_001"}', 'Y', NULL, '2026-01-20 09:32:10', '2026-01-20 09:32:11');
 
 -- 테이블 shopdb2.payments 구조 내보내기
-DROP TABLE IF EXISTS `payments`;
 CREATE TABLE IF NOT EXISTS `payments` (
   `payment_id` bigint NOT NULL AUTO_INCREMENT,
   `order_id` bigint NOT NULL,
@@ -407,9 +438,9 @@ CREATE TABLE IF NOT EXISTS `payments` (
   KEY `idx_payments_order` (`order_id`),
   KEY `idx_payment_provider` (`pg_provider`),
   CONSTRAINT `fk_payment_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.payments:~14 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.payments:~11 rows (대략적) 내보내기
 DELETE FROM `payments`;
 INSERT INTO `payments` (`payment_id`, `order_id`, `pg_provider`, `payment_key`, `pg_order_id`, `customer_key`, `payment_type`, `payment_method`, `payment_status`, `requested_amount`, `approved_amount`, `cancelled_amount`, `balance_amount`, `currency`, `receipt_url`, `requested_at`, `approved_at`, `cancelled_at`, `created_at`) VALUES
 	(1, 1, 'TOSS', 'toss_payment_2024_001', 'ORD-2024-0001', 'CUSTOMER-2024-001', 'NORMAL', 'CARD', 'DONE', 1590000.00, 1590000.00, 0.00, 1590000.00, 'KRW', NULL, '2024-03-15 10:11:00', '2024-03-15 10:12:00', NULL, '2026-09-09 16:22:31'),
@@ -422,13 +453,9 @@ INSERT INTO `payments` (`payment_id`, `order_id`, `pg_provider`, `payment_key`, 
 	(8, 8, 'TOSS', 'pending_0d46c1d855494529af924e4a7127bdcf', 'ORD-20260909-30B78244', 'user-7', 'NORMAL', 'CARD', 'READY', 2290000.00, 0.00, 0.00, 2290000.00, 'KRW', NULL, '2026-09-09 08:52:42', NULL, NULL, '2026-09-09 17:52:42'),
 	(9, 9, 'TOSS', 'pending_ca6145649f9a430a80f00e3489273e11', 'ORD-20260909-5AAE3A81', 'user-7', 'NORMAL', 'CARD', 'DONE', 2290000.00, 2290000.00, 0.00, 0.00, 'KRW', NULL, '2026-09-09 08:53:10', '2026-09-09 08:53:10', NULL, '2026-09-09 17:53:09'),
 	(10, 10, 'TOSS', 'pending_153928a8d1764aca8b0bf2f393ebd28a', 'ORD-20260909-D5381C18', 'user-8', 'NORMAL', 'CARD', 'DONE', 1690000.00, 1690000.00, 0.00, 0.00, 'KRW', NULL, '2026-09-09 09:43:21', '2026-09-09 09:47:41', NULL, '2026-09-09 18:43:21'),
-	(11, 11, 'TOSS', 'pending_cb8361db85ba4949ad18f998223d9b7c', 'ORD-20260909-09D77DAE', 'user-8', 'NORMAL', 'CARD', 'DONE', 1100000.00, 1100000.00, 0.00, 0.00, 'KRW', NULL, '2026-09-09 09:43:30', '2026-09-09 09:47:45', NULL, '2026-09-09 18:43:29'),
-	(12, 12, 'TOSS', 'pending_9c728c43966649dfb44957a5fbe0d13c', 'ORD-20260914-6A573C88', 'user-4', 'NORMAL', 'CARD', 'DONE', 129000.00, 129000.00, 0.00, 0.00, 'KRW', NULL, '2026-09-14 03:41:01', '2026-09-14 03:41:01', NULL, '2026-09-14 12:41:00'),
-	(13, 13, 'TOSS', 'pending_a062252ee5fe446889b4fcb16997bae3', 'ORD-20260914-F2EDCD47', 'user-4', 'NORMAL', 'CARD', 'DONE', 129000.00, 129000.00, 0.00, 0.00, 'KRW', NULL, '2026-09-14 03:41:03', '2026-09-14 03:41:03', NULL, '2026-09-14 12:41:03'),
-	(14, 14, 'TOSS', 'pending_e6fd40255f514835b1a9646b115fe58a', 'ORD-20260914-43765F74', 'user-3', 'NORMAL', 'CARD', 'READY', 129000.00, 0.00, 0.00, 129000.00, 'KRW', NULL, '2026-09-14 05:14:05', NULL, NULL, '2026-09-14 14:14:05');
+	(11, 11, 'TOSS', 'pending_cb8361db85ba4949ad18f998223d9b7c', 'ORD-20260909-09D77DAE', 'user-8', 'NORMAL', 'CARD', 'DONE', 1100000.00, 1100000.00, 0.00, 0.00, 'KRW', NULL, '2026-09-09 09:43:30', '2026-09-09 09:47:45', NULL, '2026-09-09 18:43:29');
 
 -- 테이블 shopdb2.policy_files 구조 내보내기
-DROP TABLE IF EXISTS `policy_files`;
 CREATE TABLE IF NOT EXISTS `policy_files` (
   `policy_file_id` bigint NOT NULL AUTO_INCREMENT,
   `policy_id` bigint NOT NULL,
@@ -439,19 +466,12 @@ CREATE TABLE IF NOT EXISTS `policy_files` (
   KEY `fk_policy_file_asset` (`file_id`),
   CONSTRAINT `fk_policy_file_asset` FOREIGN KEY (`file_id`) REFERENCES `file_assets` (`file_id`),
   CONSTRAINT `fk_policy_file_policy` FOREIGN KEY (`policy_id`) REFERENCES `company_policies` (`policy_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.policy_files:~5 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.policy_files:~0 rows (대략적) 내보내기
 DELETE FROM `policy_files`;
-INSERT INTO `policy_files` (`policy_file_id`, `policy_id`, `file_id`, `display_order`) VALUES
-	(1, 1, 6, 1),
-	(2, 1, 7, 2),
-	(3, 2, 6, 1),
-	(4, 2, 7, 2),
-	(5, 3, 7, 1);
 
 -- 테이블 shopdb2.product_files 구조 내보내기
-DROP TABLE IF EXISTS `product_files`;
 CREATE TABLE IF NOT EXISTS `product_files` (
   `product_file_id` bigint NOT NULL AUTO_INCREMENT,
   `product_id` bigint NOT NULL,
@@ -467,15 +487,13 @@ CREATE TABLE IF NOT EXISTS `product_files` (
   CONSTRAINT `fk_product_file_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.product_files:~3 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.product_files:~2 rows (대략적) 내보내기
 DELETE FROM `product_files`;
 INSERT INTO `product_files` (`product_file_id`, `product_id`, `file_id`, `file_category`, `file_description`, `display_order`, `created_at`) VALUES
 	(1, 1, 6, 'MANUAL', 'AI 개발용 노트북 사용자 매뉴얼', 0, '2026-09-09 16:22:31'),
-	(2, 5, 7, 'MANUAL', 'AI Workstation Laptop 사용자 매뉴얼', 0, '2026-09-09 16:22:31'),
-	(3, 6, 9, 'DETAIL', '01_상의_언더아머.png', 1, '2026-09-14 14:18:04');
+	(2, 5, 7, 'MANUAL', 'AI Workstation Laptop 사용자 매뉴얼', 0, '2026-09-09 16:22:31');
 
 -- 테이블 shopdb2.product_images 구조 내보내기
-DROP TABLE IF EXISTS `product_images`;
 CREATE TABLE IF NOT EXISTS `product_images` (
   `product_image_id` bigint NOT NULL AUTO_INCREMENT,
   `product_id` bigint NOT NULL,
@@ -492,18 +510,16 @@ CREATE TABLE IF NOT EXISTS `product_images` (
   CONSTRAINT `fk_product_images_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.product_images:~6 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.product_images:~5 rows (대략적) 내보내기
 DELETE FROM `product_images`;
 INSERT INTO `product_images` (`product_image_id`, `product_id`, `file_id`, `image_type`, `alt_text`, `display_order`, `active_yn`, `created_at`) VALUES
 	(1, 1, 1, 'MAIN', 'AI 개발용 노트북 대표 이미지', 1, 'Y', '2026-09-09 16:22:31'),
 	(2, 2, 2, 'MAIN', '스마트폰 Pro 대표 이미지', 1, 'Y', '2026-09-09 16:22:31'),
 	(3, 3, 3, 'MAIN', '스마트 후드티 대표 이미지', 1, 'Y', '2026-09-09 16:22:31'),
 	(4, 4, 4, 'MAIN', '스마트 러닝화 대표 이미지', 1, 'Y', '2026-09-09 16:22:31'),
-	(5, 5, 5, 'MAIN', 'AI Workstation Laptop 대표 이미지', 1, 'Y', '2026-09-09 16:22:31'),
-	(6, 6, 8, 'MAIN', '신규상품1', 1, 'Y', '2026-09-14 14:18:04');
+	(5, 5, 5, 'MAIN', 'AI Workstation Laptop 대표 이미지', 1, 'Y', '2026-09-09 16:22:31');
 
 -- 테이블 shopdb2.product_variants 구조 내보내기
-DROP TABLE IF EXISTS `product_variants`;
 CREATE TABLE IF NOT EXISTS `product_variants` (
   `variant_id` bigint NOT NULL AUTO_INCREMENT,
   `product_id` bigint NOT NULL,
@@ -518,9 +534,9 @@ CREATE TABLE IF NOT EXISTS `product_variants` (
   UNIQUE KEY `sku_code` (`sku_code`),
   KEY `fk_variant_product` (`product_id`),
   CONSTRAINT `fk_variant_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.product_variants:~9 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.product_variants:~8 rows (대략적) 내보내기
 DELETE FROM `product_variants`;
 INSERT INTO `product_variants` (`variant_id`, `product_id`, `sku_code`, `option_name1`, `option_value1`, `option_name2`, `option_value2`, `additional_price`, `active_yn`) VALUES
 	(1, 1, 'SKU-NOTE-16', 'RAM', '16GB', 'SSD', '512GB', 0.00, 'Y'),
@@ -530,11 +546,9 @@ INSERT INTO `product_variants` (`variant_id`, `product_id`, `sku_code`, `option_
 	(5, 3, 'SKU-HOOD-XL', '사이즈', 'XL', '색상', 'Brown', 0.00, 'Y'),
 	(6, 4, 'SKU-RUN-270', '사이즈', '270', '색상', 'Black', 0.00, 'Y'),
 	(7, 5, 'SKU-AI-32', 'RAM', '32GB', 'SSD', '1TB', 0.00, 'Y'),
-	(8, 5, 'SKU-AI-64', 'RAM', '64GB', 'SSD', '2TB', 500000.00, 'Y'),
-	(9, 6, 'sku1', 'Color', '옵션값1', '100', NULL, 0.00, 'Y');
+	(8, 5, 'SKU-AI-64', 'RAM', '64GB', 'SSD', '2TB', 500000.00, 'Y');
 
 -- 테이블 shopdb2.products 구조 내보내기
-DROP TABLE IF EXISTS `products`;
 CREATE TABLE IF NOT EXISTS `products` (
   `product_id` bigint NOT NULL AUTO_INCREMENT,
   `seller_user_id` bigint NOT NULL,
@@ -555,7 +569,7 @@ CREATE TABLE IF NOT EXISTS `products` (
   KEY `idx_products_seller` (`seller_user_id`),
   CONSTRAINT `fk_products_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`),
   CONSTRAINT `fk_products_seller` FOREIGN KEY (`seller_user_id`) REFERENCES `users` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- 테이블 데이터 shopdb2.products:~6 rows (대략적) 내보내기
 DELETE FROM `products`;
@@ -564,11 +578,9 @@ INSERT INTO `products` (`product_id`, `seller_user_id`, `category_id`, `product_
 	(2, 2, 4, 'P2024002', '스마트폰 Pro', '고성능 스마트폰', '고성능 모바일 프로세서가 적용된 스마트폰입니다.', 1200000.00, 1100000.00, 'SALE', '2024-05-01 10:00:00', '2026-09-09 16:22:31'),
 	(3, 3, 5, 'P2025001', '스마트 후드티', '오버핏 후드티', '편안한 오버핏 디자인의 후드티입니다.', 79000.00, 69000.00, 'SALE', '2025-02-01 10:00:00', '2026-09-09 16:22:31'),
 	(4, 3, 6, 'P2025002', '스마트 러닝화', '데일리 러닝화', '일상과 러닝에 모두 사용할 수 있습니다.', 149000.00, 129000.00, 'SALE', '2025-06-01 10:00:00', '2026-09-09 16:22:31'),
-	(5, 2, 3, 'P2026001', 'AI Workstation Laptop', '생성형 AI 개발용 워크스테이션', 'Local LLM 및 생성형 AI 개발에 적합한 노트북입니다.', 2500000.00, 2290000.00, 'SALE', '2026-01-05 10:00:00', '2026-09-09 16:22:31'),
-	(6, 3, 5, 'P202609140B14', '신규상품1', '신규상품1 짧은 소개', '신규상품1 상세설명', 90000.00, 80000.00, 'SALE', '2026-09-14 14:18:04', '2026-09-14 14:18:04');
+	(5, 2, 3, 'P2026001', 'AI Workstation Laptop', '생성형 AI 개발용 워크스테이션', 'Local LLM 및 생성형 AI 개발에 적합한 노트북입니다.', 2500000.00, 2290000.00, 'SALE', '2026-01-05 10:00:00', '2026-09-09 16:22:31');
 
 -- 테이블 shopdb2.rag_chunks 구조 내보내기
-DROP TABLE IF EXISTS `rag_chunks`;
 CREATE TABLE IF NOT EXISTS `rag_chunks` (
   `chunk_id` bigint NOT NULL AUTO_INCREMENT,
   `document_id` bigint NOT NULL,
@@ -580,17 +592,16 @@ CREATE TABLE IF NOT EXISTS `rag_chunks` (
   PRIMARY KEY (`chunk_id`),
   UNIQUE KEY `uk_document_chunk` (`document_id`,`chunk_no`),
   CONSTRAINT `fk_chunk_document` FOREIGN KEY (`document_id`) REFERENCES `rag_documents` (`document_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- 테이블 데이터 shopdb2.rag_chunks:~3 rows (대략적) 내보내기
 DELETE FROM `rag_chunks`;
 INSERT INTO `rag_chunks` (`chunk_id`, `document_id`, `chunk_no`, `chunk_text`, `token_count`, `metadata_json`, `created_at`) VALUES
-	(1, 1, 1, '2024년 환불정책은 상품 수령 후 7일 이내 미개봉 상품의 환불을 허용합니다.', 30, '{"type": "refund", "year": 2024}', '2026-09-09 16:22:32'),
 	(2, 2, 1, '스마트 후드티는 오버핏 패션 상품이며 판매가격은 69,000원입니다.', 30, '{"type": "product", "year": 2025}', '2026-09-09 16:22:32'),
-	(3, 3, 1, '2026년 환불정책은 상품 수령 후 14일 이내 미개봉 상품의 환불을 허용합니다.', 30, '{"type": "refund", "year": 2026}', '2026-09-09 16:22:32');
+	(11, 3, 1, '상품 수령 후 14일 이내 미개봉 상품은 환불 가능합니다.', 8, NULL, '2026-09-16 16:27:48'),
+	(13, 1, 1, '상품 수령 후 7일 이내 미개봉 상품은 환불 가능합니다.', 7, NULL, '2026-09-18 16:27:53');
 
 -- 테이블 shopdb2.rag_document_files 구조 내보내기
-DROP TABLE IF EXISTS `rag_document_files`;
 CREATE TABLE IF NOT EXISTS `rag_document_files` (
   `rag_document_file_id` bigint NOT NULL AUTO_INCREMENT,
   `document_id` bigint NOT NULL,
@@ -600,19 +611,12 @@ CREATE TABLE IF NOT EXISTS `rag_document_files` (
   KEY `fk_rag_document_file_asset` (`file_id`),
   CONSTRAINT `fk_rag_document_file_asset` FOREIGN KEY (`file_id`) REFERENCES `file_assets` (`file_id`),
   CONSTRAINT `fk_rag_document_file_document` FOREIGN KEY (`document_id`) REFERENCES `rag_documents` (`document_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.rag_document_files:~5 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.rag_document_files:~0 rows (대략적) 내보내기
 DELETE FROM `rag_document_files`;
-INSERT INTO `rag_document_files` (`rag_document_file_id`, `document_id`, `file_id`) VALUES
-	(1, 1, 6),
-	(2, 1, 7),
-	(3, 2, 6),
-	(4, 2, 7),
-	(5, 3, 7);
 
 -- 테이블 shopdb2.rag_documents 구조 내보내기
-DROP TABLE IF EXISTS `rag_documents`;
 CREATE TABLE IF NOT EXISTS `rag_documents` (
   `document_id` bigint NOT NULL AUTO_INCREMENT,
   `provider_id` bigint DEFAULT NULL,
@@ -632,17 +636,16 @@ CREATE TABLE IF NOT EXISTS `rag_documents` (
   KEY `idx_rag_document_type` (`document_type`),
   CONSTRAINT `fk_rag_org` FOREIGN KEY (`org_id`) REFERENCES `org_units` (`org_id`),
   CONSTRAINT `fk_rag_provider` FOREIGN KEY (`provider_id`) REFERENCES `ai_providers` (`provider_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- 테이블 데이터 shopdb2.rag_documents:~3 rows (대략적) 내보내기
 DELETE FROM `rag_documents`;
 INSERT INTO `rag_documents` (`document_id`, `provider_id`, `org_id`, `document_type`, `document_name`, `source_type`, `source_uri`, `content_text`, `version`, `document_status`, `created_at`, `updated_at`) VALUES
-	(1, 1, 1, 'REFUND_POLICY', '2024 환불정책', 'DATABASE', 'refund_policy:1', '상품 수령 후 7일 이내 미개봉 상품은 환불 가능합니다.', '2024.1', 'INDEXED', '2024-01-01 09:00:00', '2026-09-09 16:22:31'),
-	(2, 1, 1, 'PRODUCT_GUIDE', '2025 상품안내', 'DATABASE', 'products', '스마트 후드티 및 스마트 러닝화 상품 안내입니다.', '2025.1', 'INDEXED', '2025-01-10 09:00:00', '2026-09-09 16:22:31'),
-	(3, 1, 1, 'REFUND_POLICY', '2026 환불정책', 'DATABASE', 'refund_policy:3', '상품 수령 후 14일 이내 미개봉 상품은 환불 가능합니다.', '2026.1', 'INDEXED', '2026-01-01 09:00:00', '2026-09-09 16:22:31');
+	(1, 3, 1, 'REFUND_POLICY', '2024 환불정책', 'DATABASE', 'refund_policy:1', '상품 수령 후 7일 이내 미개봉 상품은 환불 가능합니다.', '2024.1', 'INDEXED', '2024-01-01 09:00:00', '2026-09-18 16:27:56'),
+	(2, 3, 1, 'PRODUCT_GUIDE', '2025 상품안내', 'DATABASE', 'products', '스마트 후드티 및 스마트 러닝화 상품 안내입니다.', '2025.1', 'INDEXED', '2025-01-10 09:00:00', '2026-09-16 16:27:38'),
+	(3, 3, 1, 'REFUND_POLICY', '2026 환불정책', 'DATABASE', 'refund_policy:3', '상품 수령 후 14일 이내 미개봉 상품은 환불 가능합니다.', '2026.1', 'INDEXED', '2026-01-01 09:00:00', '2026-09-16 16:27:52');
 
 -- 테이블 shopdb2.rag_embeddings 구조 내보내기
-DROP TABLE IF EXISTS `rag_embeddings`;
 CREATE TABLE IF NOT EXISTS `rag_embeddings` (
   `embedding_id` bigint NOT NULL AUTO_INCREMENT,
   `chunk_id` bigint NOT NULL,
@@ -657,17 +660,16 @@ CREATE TABLE IF NOT EXISTS `rag_embeddings` (
   PRIMARY KEY (`embedding_id`),
   KEY `fk_embedding_chunk` (`chunk_id`),
   CONSTRAINT `fk_embedding_chunk` FOREIGN KEY (`chunk_id`) REFERENCES `rag_chunks` (`chunk_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- 테이블 데이터 shopdb2.rag_embeddings:~3 rows (대략적) 내보내기
 DELETE FROM `rag_embeddings`;
 INSERT INTO `rag_embeddings` (`embedding_id`, `chunk_id`, `embedding_provider`, `embedding_model`, `embedding_dimension`, `embedding_json`, `vector_db_type`, `vector_collection`, `vector_external_id`, `created_at`) VALUES
-	(1, 1, 'OPENAI', 'text-embedding-3-small', 1536, NULL, 'QDRANT', 'shop_policy', 'refund-2024-001', '2026-09-09 16:22:32'),
 	(2, 2, 'OPENAI', 'text-embedding-3-small', 1536, NULL, 'QDRANT', 'shop_product', 'product-2025-001', '2026-09-09 16:22:32'),
-	(3, 3, 'OPENAI', 'text-embedding-3-small', 1536, NULL, 'QDRANT', 'shop_policy', 'refund-2026-001', '2026-09-09 16:22:32');
+	(8, 11, 'OLLAMA', 'nomic-embed-text', 768, 'null', 'QDRANT', 'shopdb2_rag', '11', '2026-09-16 16:27:52'),
+	(10, 13, 'OLLAMA', 'nomic-embed-text', 768, 'null', 'QDRANT', 'shopdb2_rag', '13', '2026-09-18 16:27:56');
 
 -- 테이블 shopdb2.rag_query_logs 구조 내보내기
-DROP TABLE IF EXISTS `rag_query_logs`;
 CREATE TABLE IF NOT EXISTS `rag_query_logs` (
   `query_log_id` bigint NOT NULL AUTO_INCREMENT,
   `user_id` bigint DEFAULT NULL,
@@ -684,19 +686,16 @@ CREATE TABLE IF NOT EXISTS `rag_query_logs` (
   KEY `fk_query_provider` (`provider_id`),
   CONSTRAINT `fk_query_provider` FOREIGN KEY (`provider_id`) REFERENCES `ai_providers` (`provider_id`),
   CONSTRAINT `fk_query_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.rag_query_logs:~5 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.rag_query_logs:~3 rows (대략적) 내보내기
 DELETE FROM `rag_query_logs`;
 INSERT INTO `rag_query_logs` (`query_log_id`, `user_id`, `provider_id`, `question_text`, `response_text`, `retrieved_chunk_ids`, `prompt_tokens`, `completion_tokens`, `response_time_ms`, `created_at`) VALUES
-	(1, 4, 1, '2024년 환불 가능 기간을 알려주세요.', '2024년 환불정책에서는 상품 수령 후 7일 이내 미개봉 상품의 환불이 가능합니다.', '[1]', 120, 55, 820, '2026-09-06 10:00:00'),
-	(2, 5, 1, '스마트 후드티 상품 정보를 알려주세요.', '스마트 후드티는 오버핏 패션 상품이며 판매가격은 69,000원입니다.', '[2]', 130, 60, 760, '2026-09-06 10:10:00'),
-	(3, 6, 2, '2026년 환불 기간은 어떻게 되나요?', '2026년에는 미개봉 상품에 대해 수령 후 14일 이내 환불을 신청할 수 있습니다.', '[3]', 145, 65, 910, '2026-09-06 10:20:00'),
-	(4, 7, 3, '2024년과 2026년 환불 정책의 차이를 알려주세요.', '2024년은 7일, 2026년은 14일 이내 미개봉 상품 환불이 가능합니다.', '[1, 3]', 180, 80, 430, '2026-09-06 10:30:00'),
-	(5, 8, 1, '상품 정보와 환불 정책을 함께 알려주세요.', '상품 정보와 환불 정책 관련 문서를 함께 검색하여 답변했습니다.', '[1, 2, 3]', 210, 95, 1050, '2026-09-06 10:40:00');
+	(3, NULL, 3, '환불 가능한 기간이 며칠이야?', '상품 수령 후 7일 이내 미개봉 상품이 환불 가능합니다.', '[8]', 94, 20, 8052, '2026-09-15 15:53:05'),
+	(4, NULL, 3, '환불 가능한 기간이 며칠이야?', '제공된 참고 문서에 따르면 상품 수령 후 7일 이내 미개봉 상품은 환불이 가능합니다.', '[8]', 94, 30, 18500, '2026-09-16 11:45:25'),
+	(5, NULL, 3, '환불 가능한 기간이 언제야', '상품 수령 후 7일 이내입니다.', '[9]', 91, 12, 7901, '2026-09-16 16:05:15');
 
 -- 테이블 shopdb2.refund_items 구조 내보내기
-DROP TABLE IF EXISTS `refund_items`;
 CREATE TABLE IF NOT EXISTS `refund_items` (
   `refund_item_id` bigint NOT NULL AUTO_INCREMENT,
   `refund_request_id` bigint NOT NULL,
@@ -708,15 +707,14 @@ CREATE TABLE IF NOT EXISTS `refund_items` (
   KEY `fk_refund_item_order_item` (`order_item_id`),
   CONSTRAINT `fk_refund_item_order_item` FOREIGN KEY (`order_item_id`) REFERENCES `order_items` (`order_item_id`),
   CONSTRAINT `fk_refund_item_request` FOREIGN KEY (`refund_request_id`) REFERENCES `refund_requests` (`refund_request_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.refund_items:~1 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.refund_items:~2 rows (대략적) 내보내기
 DELETE FROM `refund_items`;
 INSERT INTO `refund_items` (`refund_item_id`, `refund_request_id`, `order_item_id`, `refund_quantity`, `refund_amount`) VALUES
 	(1, 1, 2, 1, 1050000.00);
 
 -- 테이블 shopdb2.refund_policies 구조 내보내기
-DROP TABLE IF EXISTS `refund_policies`;
 CREATE TABLE IF NOT EXISTS `refund_policies` (
   `refund_policy_id` bigint NOT NULL AUTO_INCREMENT,
   `org_id` bigint DEFAULT NULL,
@@ -744,7 +742,6 @@ INSERT INTO `refund_policies` (`refund_policy_id`, `org_id`, `policy_name`, `all
 	(3, 1, '2026 기본 환불정책', 14, 'Y', 'N', 'Y', 'BUYER', '상품 수령 후 14일 이내 미개봉 상품은 환불 가능합니다.', '{"year": 2026, "allowedDays": 14}', '2026-01-01', NULL, 'Y');
 
 -- 테이블 shopdb2.refund_requests 구조 내보내기
-DROP TABLE IF EXISTS `refund_requests`;
 CREATE TABLE IF NOT EXISTS `refund_requests` (
   `refund_request_id` bigint NOT NULL AUTO_INCREMENT,
   `order_id` bigint NOT NULL,
@@ -764,15 +761,14 @@ CREATE TABLE IF NOT EXISTS `refund_requests` (
   CONSTRAINT `fk_refund_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`),
   CONSTRAINT `fk_refund_policy` FOREIGN KEY (`refund_policy_id`) REFERENCES `refund_policies` (`refund_policy_id`),
   CONSTRAINT `fk_refund_user` FOREIGN KEY (`buyer_user_id`) REFERENCES `users` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.refund_requests:~1 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.refund_requests:~2 rows (대략적) 내보내기
 DELETE FROM `refund_requests`;
 INSERT INTO `refund_requests` (`refund_request_id`, `order_id`, `buyer_user_id`, `refund_policy_id`, `refund_reason`, `requested_amount`, `approved_amount`, `refund_status`, `requested_at`, `approved_at`, `completed_at`) VALUES
 	(1, 2, 4, 1, '단순 변심', 1050000.00, 1050000.00, 'COMPLETED', '2024-11-22 10:00:00', '2024-11-22 13:00:00', '2024-11-23 09:00:00');
 
 -- 테이블 shopdb2.roles 구조 내보내기
-DROP TABLE IF EXISTS `roles`;
 CREATE TABLE IF NOT EXISTS `roles` (
   `role_id` bigint NOT NULL AUTO_INCREMENT,
   `role_code` varchar(30) NOT NULL,
@@ -780,7 +776,7 @@ CREATE TABLE IF NOT EXISTS `roles` (
   `description` varchar(500) DEFAULT NULL,
   PRIMARY KEY (`role_id`),
   UNIQUE KEY `role_code` (`role_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- 테이블 데이터 shopdb2.roles:~3 rows (대략적) 내보내기
 DELETE FROM `roles`;
@@ -790,7 +786,6 @@ INSERT INTO `roles` (`role_id`, `role_code`, `role_name`, `description`) VALUES
 	(3, 'ADMIN', '관리자', '쇼핑몰 관리 권한');
 
 -- 테이블 shopdb2.seller_profiles 구조 내보내기
-DROP TABLE IF EXISTS `seller_profiles`;
 CREATE TABLE IF NOT EXISTS `seller_profiles` (
   `seller_id` bigint NOT NULL AUTO_INCREMENT,
   `user_id` bigint NOT NULL,
@@ -812,8 +807,27 @@ INSERT INTO `seller_profiles` (`seller_id`, `user_id`, `company_name`, `business
 	(1, 2, '스마트전자', '222-11-11111', '전자판매자', '국민은행', '111111-11-111111', 'ACTIVE', '2026-09-09 16:22:31'),
 	(2, 3, '스마트패션', '333-22-22222', '패션판매자', '신한은행', '222222-22-222222', 'ACTIVE', '2026-09-09 16:22:31');
 
+-- 테이블 shopdb2.sql_agent_query_logs 구조 내보내기
+CREATE TABLE IF NOT EXISTS `sql_agent_query_logs` (
+  `log_id` bigint NOT NULL AUTO_INCREMENT,
+  `log_code` varchar(50) NOT NULL,
+  `user_id` bigint DEFAULT NULL,
+  `question_text` text,
+  `generated_sql` longtext,
+  `execution_status` enum('SUCCESS','BLOCKED','ERROR') NOT NULL,
+  `result_summary` longtext,
+  `response_time_ms` int DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`log_id`),
+  UNIQUE KEY `log_code` (`log_code`),
+  KEY `fk_sql_agent_user` (`user_id`),
+  CONSTRAINT `fk_sql_agent_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 테이블 데이터 shopdb2.sql_agent_query_logs:~0 rows (대략적) 내보내기
+DELETE FROM `sql_agent_query_logs`;
+
 -- 테이블 shopdb2.user_addresses 구조 내보내기
-DROP TABLE IF EXISTS `user_addresses`;
 CREATE TABLE IF NOT EXISTS `user_addresses` (
   `address_id` bigint NOT NULL AUTO_INCREMENT,
   `user_id` bigint NOT NULL,
@@ -828,18 +842,15 @@ CREATE TABLE IF NOT EXISTS `user_addresses` (
   PRIMARY KEY (`address_id`),
   KEY `fk_address_user` (`user_id`),
   CONSTRAINT `fk_address_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 테이블 데이터 shopdb2.user_addresses:~4 rows (대략적) 내보내기
+-- 테이블 데이터 shopdb2.user_addresses:~3 rows (대략적) 내보내기
 DELETE FROM `user_addresses`;
 INSERT INTO `user_addresses` (`address_id`, `user_id`, `address_name`, `receiver_name`, `receiver_phone`, `zipcode`, `address1`, `address2`, `default_yn`, `created_at`) VALUES
 	(1, 7, 'Default Address', 'Buyer 96', '010-9696-9696', '06236', 'Seoul', 'Test', 'Y', '2026-09-09 17:40:14'),
-	(2, 8, 'Default Address', '010-5555-5555', '010-5555-5555', '5555', '주소1', '주소2', 'Y', '2026-09-09 17:41:35'),
-	(3, 4, '주소4', '주소4', '010-4444-0004', '444', '주소1', '주소2', 'N', '2026-09-14 12:17:08'),
-	(5, 3, '추가 배송지', '', '', '', '', '', 'N', '2026-09-14 14:13:26');
+	(2, 8, 'Default Address', '010-5555-5555', '010-5555-5555', '5555', '주소1', '주소2', 'Y', '2026-09-09 17:41:35');
 
 -- 테이블 shopdb2.user_roles 구조 내보내기
-DROP TABLE IF EXISTS `user_roles`;
 CREATE TABLE IF NOT EXISTS `user_roles` (
   `user_id` bigint NOT NULL,
   `role_id` bigint NOT NULL,
@@ -853,7 +864,7 @@ CREATE TABLE IF NOT EXISTS `user_roles` (
 -- 테이블 데이터 shopdb2.user_roles:~10 rows (대략적) 내보내기
 DELETE FROM `user_roles`;
 INSERT INTO `user_roles` (`user_id`, `role_id`, `assigned_at`) VALUES
-	(1, 3, '2026-09-09 16:22:31'),
+	(1, 3, '2026-09-16 15:06:59'),
 	(2, 1, '2026-09-09 16:22:31'),
 	(2, 2, '2026-09-09 16:22:31'),
 	(3, 1, '2026-09-09 16:22:31'),
@@ -865,7 +876,6 @@ INSERT INTO `user_roles` (`user_id`, `role_id`, `assigned_at`) VALUES
 	(8, 1, '2026-09-09 17:41:35');
 
 -- 테이블 shopdb2.users 구조 내보내기
-DROP TABLE IF EXISTS `users`;
 CREATE TABLE IF NOT EXISTS `users` (
   `user_id` bigint NOT NULL AUTO_INCREMENT,
   `org_id` bigint DEFAULT NULL,
@@ -882,17 +892,17 @@ CREATE TABLE IF NOT EXISTS `users` (
   UNIQUE KEY `email` (`email`),
   KEY `fk_users_org` (`org_id`),
   CONSTRAINT `fk_users_org` FOREIGN KEY (`org_id`) REFERENCES `org_units` (`org_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- 테이블 데이터 shopdb2.users:~8 rows (대략적) 내보내기
 DELETE FROM `users`;
 INSERT INTO `users` (`user_id`, `org_id`, `login_id`, `password_hash`, `user_name`, `email`, `phone`, `user_status`, `created_at`, `updated_at`) VALUES
-	(1, 1, 'admin01', '$2b$admin', '쇼핑몰관리자', 'admin@smartshop.co.kr', '010-1111-1111', 'ACTIVE', '2024-01-05 10:00:00', '2026-09-09 16:22:31'),
-	(2, 1, 'seller01', '$2b$seller01', '전자판매자', 'seller01@smartshop.co.kr', '010-2222-2222', 'ACTIVE', '2024-02-01 10:00:00', '2026-09-09 16:22:31'),
-	(3, 2, 'seller02', '$2b$seller02', '패션판매자', 'seller02@smartshop.co.kr', '010-3333-3333', 'ACTIVE', '2025-01-10 10:00:00', '2026-09-09 16:22:31'),
-	(4, 2, 'buyer01', '$2b$buyer01', '구매자김', 'buyer01@gmail.com', '010-4444-4444', 'ACTIVE', '2024-03-01 10:00:00', '2026-09-09 16:22:31'),
-	(5, 3, 'buyer02', '$2b$buyer02', '구매자이', 'buyer02@gmail.com', '010-5555-5555', 'ACTIVE', '2025-05-01 10:00:00', '2026-09-09 16:22:31'),
-	(6, 1, 'buyer03', '$2b$buyer03', '구매자박', 'buyer03@gmail.com', '010-6666-6666', 'ACTIVE', '2026-01-10 10:00:00', '2026-09-09 16:22:31'),
+	(1, 1, 'admin01', '$pbkdf2-sha256$29000$.N/7/z9HSImRklJK6T0HoA$DsOeK3mwpfM23bZMIbxDr6P7t1h1DMRZwVOiq/hoKc0', '쇼핑몰관리자', 'admin@smartshop.co.kr', '010-1111-1111', 'ACTIVE', '2024-01-05 10:00:00', '2026-09-18 10:08:20'),
+	(2, 1, 'seller01', '$pbkdf2-sha256$29000$AOA8J4RQyhkDYMyZM4Zwbg$Z/iRxUqeqbPc1rjPvYiQPAwTJ.7eHhFfX.7G9.X0nSw', '전자판매자', 'seller01@smartshop.co.kr', '010-2222-2222', 'ACTIVE', '2024-02-01 10:00:00', '2026-09-18 10:08:20'),
+	(3, 2, 'seller02', '$pbkdf2-sha256$29000$U.qdM8b4/9.7F0LoXWsNYQ$xKuCEZwzw/sTuWhHOtwRXUif9sR7zcGd8q8mwk.XhVk', '패션판매자', 'seller02@smartshop.co.kr', '010-3333-3333', 'ACTIVE', '2025-01-10 10:00:00', '2026-09-18 10:08:20'),
+	(4, 2, 'buyer01', '$pbkdf2-sha256$29000$xFjrPeec8/5fK4VwLoWwdg$/YcXJ1jsuuOJFrhy4fQs/rigiMCi84Jeos1y7PDWGqo', '구매자김', 'buyer01@gmail.com', '010-4444-4444', 'ACTIVE', '2024-03-01 10:00:00', '2026-09-18 10:08:20'),
+	(5, 3, 'buyer02', '$pbkdf2-sha256$29000$lDLGeG/N.b.3FuJca40xBg$R0HQsNWs.3y7ECd74hHwOdT2Eq8KH5206CiUgDSgSho', '구매자이', 'buyer02@gmail.com', '010-5555-5555', 'ACTIVE', '2025-05-01 10:00:00', '2026-09-18 10:08:20'),
+	(6, 1, 'buyer03', '$pbkdf2-sha256$29000$FCLkfE8JQej9n1PKGSMkRA$d8MKhG8qekA2fa4QVHjpeifv2lwtuLOyD753pc26oJQ', '구매자박', 'buyer03@gmail.com', '010-6666-6666', 'ACTIVE', '2026-01-10 10:00:00', '2026-09-18 10:08:20'),
 	(7, 1, 'buyer96', '$pbkdf2-sha256$29000$lDLm/L/33nsP4TxnTOk9Zw$ygaI2gmuoJbeUAUnb0uoQJEDOfuSgAKcty881EWhpTc', 'Buyer 96', 'buyer96@test.com', '010-9696-9696', 'ACTIVE', '2026-09-09 08:40:15', '2026-09-09 17:40:14'),
 	(8, 1, 'buyer5', '$pbkdf2-sha256$29000$Q8i5NwZgTEkJQeg9JwQghA$BdDKhO3vknx64gUzdAX0tYJTgpeA7pp9m9yft1llim8', '오길동', 'test5@test.com', '010-5555-5555', 'ACTIVE', '2026-09-09 08:41:35', '2026-09-09 17:41:35');
 

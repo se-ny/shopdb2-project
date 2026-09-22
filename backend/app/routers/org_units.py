@@ -7,8 +7,26 @@ from app.core.database import get_db
 from app.core.deps import require_role, CurrentUser
 from app.models.org_unit import OrgUnit
 from app.schemas.org_unit import OrgUnitCreate, OrgUnitUpdate, OrgUnitResponse
+from app.services.admin_log_service import log_admin_action
 
 router = APIRouter(prefix="/api/admin/orgs", tags=["조직관리"])
+
+
+def _org_snapshot(org: OrgUnit) -> dict:
+    """로그의 before_value/after_value에 남길 조직 상태 스냅샷입니다."""
+    return {
+        "org_code": org.org_code,
+        "org_name": org.org_name,
+        "org_type": org.org_type,
+        "business_number": org.business_number,
+        "representative_name": org.representative_name,
+        "phone": org.phone,
+        "email": org.email,
+        "zipcode": org.zipcode,
+        "address1": org.address1,
+        "address2": org.address2,
+        "active_yn": org.active_yn,
+    }
 
 
 @router.get("", response_model=List[OrgUnitResponse])
@@ -60,8 +78,23 @@ def update_org(
     if not org:
         raise HTTPException(status_code=404, detail="조직을 찾을 수 없습니다.")
 
+    before = _org_snapshot(org)
+
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(org, field, value)
+
+    after = _org_snapshot(org)
+
+    log_admin_action(
+        db,
+        admin_user_id=current_user.user_id,
+        action_type="ORG_UPDATE",
+        target_table="org_units",
+        target_id=org.org_id,
+        org_id=org.org_id,
+        before_value=before,
+        after_value=after,
+    )
 
     db.commit()
     db.refresh(org)
@@ -79,7 +112,21 @@ def deactivate_org(
     if not org:
         raise HTTPException(status_code=404, detail="조직을 찾을 수 없습니다.")
 
+    before = _org_snapshot(org)
     org.active_yn = "N"
+    after = _org_snapshot(org)
+
+    log_admin_action(
+        db,
+        admin_user_id=current_user.user_id,
+        action_type="ORG_DEACTIVATE",
+        target_table="org_units",
+        target_id=org.org_id,
+        org_id=org.org_id,
+        before_value=before,
+        after_value=after,
+    )
+
     db.commit()
     db.refresh(org)
     return org

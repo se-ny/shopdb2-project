@@ -3,10 +3,18 @@ import "../../styles/admin.css";
 import { useAuth } from "../../context/AuthContext";
 
 const MENU_ITEMS = [
+  { to: "/admin/dashboard", label: "대시보드" },
   { to: "/admin/orgs", label: "조직관리" },
+  { to: "/admin/orders", label: "주문관리" },
+  { to: "/admin/products", label: "상품승인관리" },
   { to: "/admin/users", label: "회원/권한" },
   { to: "/admin/policies", label: "정책관리" },
+  { to: "/admin/payments", label: "결제/환불관리" },
   { to: "/admin/ai", label: "AI / RAG" },
+  { to: "/admin/feedback", label: "AI 피드백" },
+  { to: "/admin/sql-agent", label: "SQL 에이전트" },
+  { to: "/admin/alerts", label: "시스템 알림" },
+  { to: "/admin/logs", label: "활동로그" },
 ];
 
 function AdminLayout() {

@@ -94,6 +94,7 @@ class RagQueryRequest(BaseModel):
 
 
 class RagQueryResponse(BaseModel):
+    query_log_id: int
     answer: str
     retrieved_chunks: List[RagChunkResponse]
     response_time_ms: int

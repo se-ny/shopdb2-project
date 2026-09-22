@@ -6,6 +6,7 @@ import {
   queryRag,
   deactivateProvider,
   deleteDocument,
+  submitFeedback,
 } from "../../api/admin";
 import DocumentForm from "./DocumentForm";
 import DocumentEditPanel from "./DocumentEditPanel";
@@ -26,6 +27,7 @@ function AiRagPage() {
   const [answer, setAnswer] = useState(null);
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryError, setQueryError] = useState("");
+  const [feedbackSent, setFeedbackSent] = useState(false);
 
   function loadAll() {
     setLoading(true);
@@ -82,10 +84,25 @@ function AiRagPage() {
     try {
       const result = await queryRag({ question, provider_code: providerCode, top_k: 3 });
       setAnswer(result);
+      setFeedbackSent(false);
     } catch (error) {
       setQueryError(error.message);
     } finally {
       setQueryLoading(false);
+    }
+  }
+
+  async function handleFeedback(score) {
+    if (!answer) return;
+    try {
+      await submitFeedback({
+        source_type: "RAG",
+        source_log_id: answer.query_log_id,
+        feedback_score: score,
+      });
+      setFeedbackSent(true);
+    } catch (error) {
+      alert(`피드백 전송 실패: ${error.message}`);
     }
   }
 
@@ -214,6 +231,15 @@ function AiRagPage() {
           <p className="rag-answer-meta">
             참고 청크 {answer.retrieved_chunks.length}건 · 응답시간 {answer.response_time_ms}ms
           </p>
+          {feedbackSent ? (
+            <p style={{ color: "#16a34a", fontSize: 13 }}>피드백 감사합니다!</p>
+          ) : (
+            <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
+              <span style={{ fontSize: 13, color: "#6b7280" }}>이 답변이 도움이 됐나요?</span>
+              <button onClick={() => handleFeedback("GOOD")}>👍</button>
+              <button onClick={() => handleFeedback("BAD")}>👎</button>
+            </div>
+          )}
         </div>
       )}
     </div>

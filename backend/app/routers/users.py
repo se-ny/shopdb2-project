@@ -7,6 +7,7 @@ from app.core.database import get_db
 from app.core.deps import require_role, CurrentUser
 from app.models.user import User, Role, UserRole
 from app.schemas.user import UserResponse, UserUpdate, RoleAssign
+from app.services.admin_log_service import log_admin_action
 
 router = APIRouter(prefix="/api/admin/users", tags=["회원관리"])
 
@@ -84,6 +85,24 @@ def assign_role(
         raise HTTPException(status_code=409, detail="이미 부여된 역할입니다.")
 
     db.add(UserRole(user_id=user_id, role_id=payload.role_id))
+
+    log_admin_action(
+        db,
+        admin_user_id=current_user.user_id,
+        action_type="ROLE_ASSIGN",
+        target_table="user_roles",
+        target_id=user.user_id,
+        org_id=current_user.org_id,
+        before_value=None,
+        after_value={
+            "user_id": user.user_id,
+            "user_name": user.user_name,
+            "role_id": role.role_id,
+            "role_code": role.role_code,
+            "role_name": role.role_name,
+        },
+    )
+
     db.commit()
     db.refresh(user)
     return user
@@ -104,9 +123,28 @@ def remove_role(
     if not user_role:
         raise HTTPException(status_code=404, detail="해당 역할이 부여되어 있지 않습니다.")
 
+    user = db.query(User).filter(User.user_id == user_id).first()
+    role = db.query(Role).filter(Role.role_id == role_id).first()
+
+    log_admin_action(
+        db,
+        admin_user_id=current_user.user_id,
+        action_type="ROLE_REVOKE",
+        target_table="user_roles",
+        target_id=user_id,
+        org_id=current_user.org_id,
+        before_value={
+            "user_id": user_id,
+            "user_name": user.user_name if user else None,
+            "role_id": role_id,
+            "role_code": role.role_code if role else None,
+            "role_name": role.role_name if role else None,
+        },
+        after_value=None,
+    )
+
     db.delete(user_role)
     db.commit()
 
-    user = db.query(User).filter(User.user_id == user_id).first()
     db.refresh(user)
     return user
