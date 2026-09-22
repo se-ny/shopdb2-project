@@ -12,7 +12,7 @@ from app.schemas.seller_order import (
 
 router = APIRouter(
     prefix="/api/seller/orders",
-    tags=["seller-orders"],
+    tags=["판매자 주문관리"],
 )
 
 

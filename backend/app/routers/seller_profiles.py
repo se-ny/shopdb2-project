@@ -11,7 +11,7 @@ from app.schemas.seller_profile import (
 
 router = APIRouter(
     prefix="/api/seller/profile",
-    tags=["seller-profile"],
+    tags=["판매자 정보관리"],
 )
 
 

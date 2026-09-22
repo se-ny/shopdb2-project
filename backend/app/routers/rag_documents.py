@@ -11,7 +11,7 @@ from app.services.chunking import split_into_chunks
 from app.services.embeddings import get_embedding
 from app.services.vector_store import upsert_chunk_vector, delete_chunk_vector, COLLECTION_NAME
 
-router = APIRouter(prefix="/api/admin/ai/documents", tags=["rag-documents"])
+router = APIRouter(prefix="/api/admin/ai/documents", tags=["AI 문서관리"])
 
 
 def _delete_document_chunks(document_id: int, db: Session):

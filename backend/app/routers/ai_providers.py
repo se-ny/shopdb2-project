@@ -9,7 +9,7 @@ from app.core.deps import require_role, CurrentUser
 from app.models.ai import AIProvider
 from app.schemas.ai import AIProviderResponse, AIProviderCreate, AIProviderUpdate
 
-router = APIRouter(prefix="/api/admin/ai/providers", tags=["ai-providers"])
+router = APIRouter(prefix="/api/admin/ai/providers", tags=["AI 서비스관리"])
 
 
 @router.get("", response_model=List[AIProviderResponse])

@@ -8,7 +8,7 @@ from app.core.deps import require_role, CurrentUser
 from app.models.org_unit import OrgUnit
 from app.schemas.org_unit import OrgUnitCreate, OrgUnitUpdate, OrgUnitResponse
 
-router = APIRouter(prefix="/api/admin/orgs", tags=["organizations"])
+router = APIRouter(prefix="/api/admin/orgs", tags=["조직관리"])
 
 
 @router.get("", response_model=List[OrgUnitResponse])

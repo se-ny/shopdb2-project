@@ -11,7 +11,7 @@ from app.schemas.policy import (
     RefundPolicyCreate, RefundPolicyResponse,
 )
 
-router = APIRouter(prefix="/api/admin/policies", tags=["policies"])
+router = APIRouter(prefix="/api/admin/policies", tags=["정책관리"])
 
 
 # ---------- 회사정책 ----------
