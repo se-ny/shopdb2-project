@@ -84,10 +84,20 @@ export function updateProduct(
   });
 }
 
-export function deleteProduct(productId) {
-  return request(`/products/${productId}`, {
-    method: "DELETE",
+export function deleteProduct(
+  productId,
+  sellerUserId,
+) {
+  const query = new URLSearchParams({
+    seller_user_id: String(sellerUserId),
   });
+
+  return request(
+    `/products/${productId}?${query.toString()}`,
+    {
+      method: "DELETE",
+    },
+  );
 }
 
 export function getProductVariants(productId) {

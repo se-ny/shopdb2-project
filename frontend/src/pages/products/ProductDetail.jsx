@@ -298,7 +298,16 @@ export default function ProductDetail({ productId }) {
       setError("");
       setMessage("");
 
-      await deleteProduct(productId);
+      if (!product?.seller_user_id) {
+        throw new Error(
+          "판매자 사용자 ID를 확인할 수 없습니다.",
+        );
+      }
+
+      await deleteProduct(
+        productId,
+        product.seller_user_id,
+      );
 
       setProduct((current) => ({
         ...current,
