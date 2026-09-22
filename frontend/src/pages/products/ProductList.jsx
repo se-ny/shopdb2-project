@@ -13,31 +13,70 @@ export default function ProductList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [currentView, setCurrentView] =
+    useState("list");
+
   const [selectedProductId, setSelectedProductId] =
     useState(null);
 
-  const [showCreateForm, setShowCreateForm] =
-    useState(false);
+  useEffect(() => {
+    let cancelled = false;
 
-  const [showSellerOrders, setShowSellerOrders] =
-    useState(false);
+    async function loadProducts() {
+      try {
+        await Promise.resolve();
 
-  const [showSellerProfile, setShowSellerProfile] =
-    useState(false);
+        const data = await getProducts({
+          keyword: "",
+          skip: 0,
+          limit: 50,
+        });
 
-  async function loadProducts(searchKeyword = "") {
+        if (!cancelled) {
+          setProducts(
+            data.filter(
+              (product) =>
+                product.product_status !== "DELETED",
+            ),
+          );
+          setError("");
+          setLoading(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err.message ||
+              "상품을 불러오지 못했습니다.",
+          );
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function searchProducts(searchKeyword) {
     try {
       setLoading(true);
       setError("");
 
       const data = await getProducts({
         keyword: searchKeyword,
-        product_status: "SALE",
         skip: 0,
         limit: 50,
       });
 
-      setProducts(data);
+      setProducts(
+        data.filter(
+          (product) =>
+            product.product_status !== "DELETED",
+        ),
+      );
     } catch (err) {
       setError(
         err.message ||
@@ -48,191 +87,38 @@ export default function ProductList() {
     }
   }
 
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
-  function resetView() {
-    setSelectedProductId(null);
-    setShowCreateForm(false);
-    setShowSellerOrders(false);
-    setShowSellerProfile(false);
-  }
-
-  function scrollTop() {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  }
-
   function handleSubmit(event) {
     event.preventDefault();
-
-    loadProducts(keyword.trim());
+    searchProducts(keyword);
   }
 
-  function handleProductClick(productId) {
-    resetView();
-
-    setSelectedProductId(productId);
-
-    scrollTop();
+  function handleProductClick(product) {
+    setSelectedProductId(product.product_id);
+    setCurrentView("detail");
   }
 
   function handleBackToList() {
-    resetView();
-
-    scrollTop();
+    setSelectedProductId(null);
+    setCurrentView("list");
+    searchProducts(keyword);
   }
 
-  function handleOpenCreateForm() {
-    resetView();
-
-    setShowCreateForm(true);
-
-    scrollTop();
-  }
-
-  function handleOpenSellerOrders() {
-    resetView();
-
-    setShowSellerOrders(true);
-
-    scrollTop();
-  }
-
-  function handleOpenSellerProfile() {
-    resetView();
-
-    setShowSellerProfile(true);
-
-    scrollTop();
-  }
-
-  async function handleCreated() {
-    resetView();
-
-    setKeyword("");
-
-    await loadProducts("");
-
-    scrollTop();
-  }
-
-  if (showSellerProfile) {
+  if (
+    currentView === "detail" &&
+    selectedProductId
+  ) {
     return (
-      <section>
+      <>
         <div
           style={{
-            maxWidth: "900px",
-            margin: "24px auto 0",
+            maxWidth: 1280,
+            margin: "16px auto 0",
             padding: "0 24px",
           }}
         >
           <button
             type="button"
             onClick={handleBackToList}
-            style={{
-              padding: "10px 16px",
-              border: "1px solid #dddddd",
-              borderRadius: "8px",
-              background: "#ffffff",
-              cursor: "pointer",
-            }}
-          >
-            ← 상품 관리로
-          </button>
-        </div>
-
-        <SellerProfile />
-      </section>
-    );
-  }
-
-  if (showSellerOrders) {
-    return (
-      <section>
-        <div
-          style={{
-            maxWidth: "1200px",
-            margin: "24px auto 0",
-            padding: "0 24px",
-          }}
-        >
-          <button
-            type="button"
-            onClick={handleBackToList}
-            style={{
-              padding: "10px 16px",
-              border: "1px solid #dddddd",
-              borderRadius: "8px",
-              background: "#ffffff",
-              cursor: "pointer",
-            }}
-          >
-            ← 상품 관리로
-          </button>
-        </div>
-
-        <SellerOrderList />
-      </section>
-    );
-  }
-
-  if (showCreateForm) {
-    return (
-      <section>
-        <div
-          style={{
-            maxWidth: "1280px",
-            margin: "24px auto 0",
-            padding: "0 24px",
-          }}
-        >
-          <button
-            type="button"
-            onClick={handleBackToList}
-            style={{
-              padding: "10px 16px",
-              border: "1px solid #dddddd",
-              borderRadius: "8px",
-              background: "#ffffff",
-              cursor: "pointer",
-            }}
-          >
-            ← 상품 목록으로
-          </button>
-        </div>
-
-        <ProductForm
-          onCreated={handleCreated}
-          onCancel={handleBackToList}
-        />
-      </section>
-    );
-  }
-
-  if (selectedProductId !== null) {
-    return (
-      <section>
-        <div
-          style={{
-            maxWidth: "1280px",
-            margin: "24px auto 0",
-            padding: "0 24px",
-          }}
-        >
-          <button
-            type="button"
-            onClick={handleBackToList}
-            style={{
-              padding: "10px 16px",
-              border: "1px solid #dddddd",
-              borderRadius: "8px",
-              background: "#ffffff",
-              cursor: "pointer",
-            }}
           >
             ← 상품 목록으로
           </button>
@@ -240,8 +126,82 @@ export default function ProductList() {
 
         <ProductDetail
           productId={selectedProductId}
+          onBack={handleBackToList}
         />
-      </section>
+      </>
+    );
+  }
+
+  if (currentView === "create") {
+    return (
+      <>
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: "16px auto 0",
+            padding: "0 24px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleBackToList}
+          >
+            ← 상품 목록으로
+          </button>
+        </div>
+
+        <ProductForm onBack={handleBackToList} />
+      </>
+    );
+  }
+
+  if (currentView === "orders") {
+    return (
+      <>
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: "16px auto 0",
+            padding: "0 24px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleBackToList}
+          >
+            ← 상품 관리로
+          </button>
+        </div>
+
+        <SellerOrderList
+          onBack={handleBackToList}
+        />
+      </>
+    );
+  }
+
+  if (currentView === "profile") {
+    return (
+      <>
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: "16px auto 0",
+            padding: "0 24px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleBackToList}
+          >
+            ← 상품 관리로
+          </button>
+        </div>
+
+        <SellerProfile
+          onBack={handleBackToList}
+        />
+      </>
     );
   }
 
@@ -252,20 +212,17 @@ export default function ProductList() {
           <p className="product-page__eyebrow">
             SHOPDB2
           </p>
-
           <h1>상품 목록</h1>
-
-          <p>
-            상품·판매 담당 상품 관리
-          </p>
+          <p>상품·판매 담당 상품 관리</p>
         </div>
 
         <div
           style={{
             display: "flex",
-            gap: "12px",
+            gap: "8px",
             alignItems: "center",
             flexWrap: "wrap",
+            justifyContent: "flex-end",
           }}
         >
           <form
@@ -281,50 +238,32 @@ export default function ProductList() {
               placeholder="상품명 또는 상품코드 검색"
             />
 
-            <button type="submit">
-              검색
-            </button>
+            <button type="submit">검색</button>
           </form>
 
           <button
             type="button"
-            onClick={handleOpenSellerOrders}
-            style={{
-              padding: "11px 18px",
-              border: "1px solid #111111",
-              borderRadius: "8px",
-              background: "#ffffff",
-              cursor: "pointer",
-            }}
+            onClick={() =>
+              setCurrentView("orders")
+            }
           >
             판매 주문 관리
           </button>
 
           <button
             type="button"
-            onClick={handleOpenSellerProfile}
-            style={{
-              padding: "11px 18px",
-              border: "1px solid #111111",
-              borderRadius: "8px",
-              background: "#ffffff",
-              cursor: "pointer",
-            }}
+            onClick={() =>
+              setCurrentView("profile")
+            }
           >
             판매자 정보 관리
           </button>
 
           <button
             type="button"
-            onClick={handleOpenCreateForm}
-            style={{
-              padding: "11px 18px",
-              border: "0",
-              borderRadius: "8px",
-              background: "#111111",
-              color: "#ffffff",
-              cursor: "pointer",
-            }}
+            onClick={() =>
+              setCurrentView("create")
+            }
           >
             + 상품 등록
           </button>
@@ -360,9 +299,7 @@ export default function ProductList() {
                 key={product.product_id}
                 product={product}
                 onClick={() =>
-                  handleProductClick(
-                    product.product_id,
-                  )
+                  handleProductClick(product)
                 }
               />
             ))}

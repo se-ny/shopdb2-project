@@ -1,3 +1,6 @@
+import { useState } from "react";
+import ProductDeleteRestoreManager from "./ProductDeleteRestoreManager";
+
 const SELLER_MENUS = [
   {
     key: "seller-products",
@@ -23,12 +26,29 @@ const SELLER_MENUS = [
     description:
       "새로운 판매 상품의 기본 정보를 등록합니다.",
   },
+  {
+    key: "seller-product-delete-restore",
+    title: "상품 삭제·복원 관리",
+    description:
+      "판매 상품을 삭제 상태로 변경하거나 삭제된 상품을 다시 복원합니다.",
+  },
 ];
 
 export default function SellerDashboard({
   onBack,
   onSelect,
 }) {
+  const [localView, setLocalView] =
+    useState("dashboard");
+
+  if (localView === "product-delete-restore") {
+    return (
+      <ProductDeleteRestoreManager
+        onBack={() => setLocalView("dashboard")}
+      />
+    );
+  }
+
   return (
     <section
       style={{
@@ -127,7 +147,19 @@ export default function SellerDashboard({
 
             <button
               type="button"
-              onClick={() => onSelect(menu.key)}
+              onClick={() => {
+                if (
+                  menu.key ===
+                  "seller-product-delete-restore"
+                ) {
+                  setLocalView(
+                    "product-delete-restore",
+                  );
+                  return;
+                }
+
+                onSelect(menu.key);
+              }}
               style={{
                 alignSelf: "flex-start",
                 padding: "10px 15px",
