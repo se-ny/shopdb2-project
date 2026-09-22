@@ -15,6 +15,10 @@ import BuyerShop from "./pages/buyer/BuyerShop";
 
 // 판매자 상품 / 옵션 / 이미지 / 재고 관리
 import SellerProductList from "./pages/products/ProductList";
+import ProductForm from "./pages/products/ProductForm";
+import SellerOrderList from "./pages/orders/SellerOrderList";
+import SellerProfile from "./pages/seller/SellerProfile";
+import SellerDashboard from "./pages/seller/SellerDashboard";
 
 // ============================================================
 // 인증
@@ -45,6 +49,17 @@ import ProductApprovalPage from "./pages/admin/ProductApprovalPage";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
+
+
+function SellerPageNavigation({ onBack, backLabel }) {
+  return (
+    <div style={{ maxWidth: 1280, margin: "16px auto 0", padding: "0 24px" }}>
+      <button type="button" onClick={onBack}>
+        {backLabel}
+      </button>
+    </div>
+  );
+}
 
 function HomePage() {
   const [backendStatus, setBackendStatus] = useState("확인 중");
@@ -106,13 +121,57 @@ function HomePage() {
 
   if (currentView === "seller") {
     return (
+      <SellerDashboard
+        onBack={() => setCurrentView("home")}
+        onSelect={setCurrentView}
+      />
+    );
+  }
+
+  if (currentView === "seller-products") {
+    return (
       <>
-        <div style={{ maxWidth: 1280, margin: "16px auto 0", padding: "0 24px" }}>
-          <button type="button" onClick={() => setCurrentView("home")}>
-            ← SHOPDB2 소개
-          </button>
-        </div>
+        <SellerPageNavigation
+          onBack={() => setCurrentView("seller")}
+          backLabel="← 판매자 운영"
+        />
         <SellerProductList />
+      </>
+    );
+  }
+
+  if (currentView === "seller-orders") {
+    return (
+      <>
+        <SellerPageNavigation
+          onBack={() => setCurrentView("seller")}
+          backLabel="← 판매자 운영"
+        />
+        <SellerOrderList />
+      </>
+    );
+  }
+
+  if (currentView === "seller-profile") {
+    return (
+      <>
+        <SellerPageNavigation
+          onBack={() => setCurrentView("seller")}
+          backLabel="← 판매자 운영"
+        />
+        <SellerProfile />
+      </>
+    );
+  }
+
+  if (currentView === "seller-product-new") {
+    return (
+      <>
+        <SellerPageNavigation
+          onBack={() => setCurrentView("seller")}
+          backLabel="← 판매자 운영"
+        />
+        <ProductForm />
       </>
     );
   }
@@ -239,6 +298,9 @@ function HomePage() {
             <p className="project-label">SELLER</p>
             <h3>판매자 운영</h3>
             <p>상품·옵션·이미지·재고와 판매 관련 정보를 관리하는 업무 흐름입니다.</p>
+            <button type="button" onClick={() => setCurrentView("seller")}>
+              판매자 운영 들어가기
+            </button>
           </article>
 
           <article>

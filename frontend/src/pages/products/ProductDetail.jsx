@@ -437,6 +437,12 @@ export default function ProductDetail({ productId }) {
       const draft =
         inventoryDrafts[item.inventory_id];
 
+      if (!product?.seller_user_id) {
+        throw new Error(
+          "판매자 사용자 ID를 확인할 수 없습니다.",
+        );
+      }
+
       const updated = await updateProductInventory(
         productId,
         item.inventory_id,
@@ -448,6 +454,7 @@ export default function ProductDetail({ productId }) {
             draft.safety_stock,
           ),
         },
+        product.seller_user_id,
       );
 
       setInventory((current) =>

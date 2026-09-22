@@ -145,9 +145,14 @@ export function updateProductInventory(
   productId,
   inventoryId,
   inventory,
+  sellerUserId,
 ) {
+  const query = new URLSearchParams({
+    seller_user_id: String(sellerUserId),
+  });
+
   return request(
-    `/products/${productId}/inventory/${inventoryId}`,
+    `/products/${productId}/inventory/${inventoryId}?${query.toString()}`,
     {
       method: "PUT",
       body: JSON.stringify(inventory),
