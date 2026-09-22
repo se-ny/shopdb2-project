@@ -23,6 +23,15 @@ class CompanyPolicyCreate(CompanyPolicyBase):
     pass
 
 
+class CompanyPolicyUpdate(BaseModel):
+    policy_name: Optional[str] = None
+    policy_version: Optional[str] = None
+    policy_type: Optional[str] = None
+    policy_content: Optional[str] = None
+    effective_from: Optional[date] = None
+    effective_to: Optional[date] = None
+
+
 class CompanyPolicyResponse(CompanyPolicyBase):
     policy_id: int
     active_yn: str
@@ -49,6 +58,19 @@ class RefundPolicyBase(BaseModel):
 
 class RefundPolicyCreate(RefundPolicyBase):
     pass
+
+
+class RefundPolicyUpdate(BaseModel):
+    policy_name: Optional[str] = None
+    allowed_days: Optional[int] = None
+    unopened_refund_yn: Optional[Literal["Y", "N"]] = None
+    opened_refund_yn: Optional[Literal["Y", "N"]] = None
+    defective_refund_yn: Optional[Literal["Y", "N"]] = None
+    shipping_fee_payer: Optional[ShippingFeePayer] = None
+    refund_policy_text: Optional[str] = None
+    policy_json: Optional[dict[str, Any]] = None
+    effective_from: Optional[date] = None
+    effective_to: Optional[date] = None
 
 
 class RefundPolicyResponse(RefundPolicyBase):

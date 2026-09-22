@@ -10,6 +10,8 @@ function PolicyList() {
   const [errorMessage, setErrorMessage] = useState("");
   const [showCompanyForm, setShowCompanyForm] = useState(false);
   const [showRefundForm, setShowRefundForm] = useState(false);
+  const [editingCompanyPolicy, setEditingCompanyPolicy] = useState(null);
+  const [editingRefundPolicy, setEditingRefundPolicy] = useState(null);
 
   function loadAll() {
     setLoading(true);
@@ -38,6 +40,26 @@ function PolicyList() {
     loadAll();
   }
 
+  function handleEditCompany(policy) {
+    setEditingCompanyPolicy(policy);
+    setShowCompanyForm(true);
+  }
+
+  function handleEditRefund(policy) {
+    setEditingRefundPolicy(policy);
+    setShowRefundForm(true);
+  }
+
+  function handleAddCompany() {
+    setEditingCompanyPolicy(null);
+    setShowCompanyForm(true);
+  }
+
+  function handleAddRefund() {
+    setEditingRefundPolicy(null);
+    setShowRefundForm(true);
+  }
+
   if (loading) return <p>불러오는 중...</p>;
   if (errorMessage) return <p className="error-message">{errorMessage}</p>;
 
@@ -47,12 +69,13 @@ function PolicyList() {
 
       <div className="admin-page-header">
         <h2 className="policy-section-title">이용약관 (company_policies)</h2>
-        {!showCompanyForm && <button onClick={() => setShowCompanyForm(true)}>+ 새 버전 등록</button>}
+        {!showCompanyForm && <button onClick={handleAddCompany}>+ 새 버전 등록</button>}
       </div>
       {showCompanyForm && (
         <CompanyPolicyForm
-          onSaved={() => { setShowCompanyForm(false); loadAll(); }}
-          onCancel={() => setShowCompanyForm(false)}
+          editingPolicy={editingCompanyPolicy}
+          onSaved={() => { setShowCompanyForm(false); setEditingCompanyPolicy(null); loadAll(); }}
+          onCancel={() => { setShowCompanyForm(false); setEditingCompanyPolicy(null); }}
         />
       )}
       <table className="admin-table">
@@ -71,6 +94,7 @@ function PolicyList() {
               <td>{policy.effective_to ?? "-"}</td>
               <td>{policy.active_yn === "Y" ? "활성" : "만료"}</td>
               <td>
+                <button onClick={() => handleEditCompany(policy)}>수정</button>
                 {policy.active_yn === "Y" && (
                   <button onClick={() => handleExpireCompany(policy.policy_id)}>만료처리</button>
                 )}
@@ -82,12 +106,13 @@ function PolicyList() {
 
       <div className="admin-page-header">
         <h2 className="policy-section-title">환불정책 (refund_policies)</h2>
-        {!showRefundForm && <button onClick={() => setShowRefundForm(true)}>+ 새 버전 등록</button>}
+        {!showRefundForm && <button onClick={handleAddRefund}>+ 새 버전 등록</button>}
       </div>
       {showRefundForm && (
         <RefundPolicyForm
-          onSaved={() => { setShowRefundForm(false); loadAll(); }}
-          onCancel={() => setShowRefundForm(false)}
+          editingPolicy={editingRefundPolicy}
+          onSaved={() => { setShowRefundForm(false); setEditingRefundPolicy(null); loadAll(); }}
+          onCancel={() => { setShowRefundForm(false); setEditingRefundPolicy(null); }}
         />
       )}
       <table className="admin-table">
@@ -108,6 +133,7 @@ function PolicyList() {
               <td>{policy.effective_from}</td>
               <td>{policy.active_yn === "Y" ? "활성" : "만료"}</td>
               <td>
+                <button onClick={() => handleEditRefund(policy)}>수정</button>
                 {policy.active_yn === "Y" && (
                   <button onClick={() => handleExpireRefund(policy.refund_policy_id)}>만료처리</button>
                 )}

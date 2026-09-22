@@ -7,6 +7,7 @@ const MENU_ITEMS = [
   { to: "/admin/orgs", label: "조직관리" },
   { to: "/admin/orders", label: "주문관리" },
   { to: "/admin/products", label: "상품승인관리" },
+  { to: "/admin/categories", label: "카테고리관리" },
   { to: "/admin/users", label: "회원/권한" },
   { to: "/admin/policies", label: "정책관리" },
   { to: "/admin/payments", label: "결제/환불관리" },
