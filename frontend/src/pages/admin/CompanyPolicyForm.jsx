@@ -10,6 +10,7 @@ function CompanyPolicyForm({ onSaved, onCancel }) {
     policy_content: "",
     effective_from: "",
     effective_to: "",
+    org_id: "",
   });
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -26,6 +27,7 @@ function CompanyPolicyForm({ onSaved, onCancel }) {
       await createCompanyPolicy({
         ...form,
         effective_to: form.effective_to || null,
+        org_id: form.org_id ? Number(form.org_id) : null,
       });
       onSaved();
     } catch (error) {
@@ -53,6 +55,22 @@ function CompanyPolicyForm({ onSaved, onCancel }) {
           onChange={(e) => handleChange("policy_version", e.target.value)}
           placeholder="예: 2027.1"
           required
+        />
+      </label>
+      <label>
+        정책 유형
+        <input
+          value={form.policy_type}
+          onChange={(e) => handleChange("policy_type", e.target.value)}
+          placeholder="예: TERMS, PRIVACY"
+        />
+      </label>
+      <label>
+        적용 조직 ID (비워두면 전사 공통)
+        <input
+          type="number"
+          value={form.org_id}
+          onChange={(e) => handleChange("org_id", e.target.value)}
         />
       </label>
       <label>

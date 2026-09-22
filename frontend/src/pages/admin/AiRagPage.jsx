@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
-import { fetchProviders, fetchDocuments, indexDocument, queryRag } from "../../api/admin";
+import {
+  fetchProviders,
+  fetchDocuments,
+  indexDocument,
+  queryRag,
+  deactivateProvider,
+  deleteDocument,
+} from "../../api/admin";
 import DocumentForm from "./DocumentForm";
+import DocumentEditPanel from "./DocumentEditPanel";
+import ProviderEditPanel from "./ProviderEditPanel";
 
 function AiRagPage() {
   const [providers, setProviders] = useState([]);
@@ -9,6 +18,8 @@ function AiRagPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [indexingId, setIndexingId] = useState(null);
   const [showDocForm, setShowDocForm] = useState(false);
+  const [editingProviderId, setEditingProviderId] = useState(null);
+  const [editingDocumentId, setEditingDocumentId] = useState(null);
 
   const [question, setQuestion] = useState("");
   const [providerCode, setProviderCode] = useState("OLLAMA");
@@ -43,6 +54,26 @@ function AiRagPage() {
     }
   }
 
+  async function handleDeleteDocument(doc) {
+    if (!confirm(`"${doc.document_name}" 문서를 완전히 삭제하시겠습니까? (인덱싱 데이터도 함께 삭제됩니다)`)) return;
+    try {
+      await deleteDocument(doc.document_id);
+      loadAll();
+    } catch (error) {
+      alert(`삭제 실패: ${error.message}`);
+    }
+  }
+
+  async function handleDeactivateProvider(provider) {
+    if (!confirm(`${provider.provider_code}를 비활성화하시겠습니까?`)) return;
+    try {
+      await deactivateProvider(provider.provider_id);
+      loadAll();
+    } catch (error) {
+      alert(`비활성화 실패: ${error.message}`);
+    }
+  }
+
   async function handleQuerySubmit(event) {
     event.preventDefault();
     setQueryLoading(true);
@@ -66,6 +97,15 @@ function AiRagPage() {
       <h1>AI / RAG 관리</h1>
 
       <h2 className="policy-section-title">Provider 목록</h2>
+
+      {editingProviderId && (
+        <ProviderEditPanel
+          provider={providers.find((p) => p.provider_id === editingProviderId)}
+          onSaved={() => { setEditingProviderId(null); loadAll(); }}
+          onCancel={() => setEditingProviderId(null)}
+        />
+      )}
+
       <table className="admin-table">
         <thead>
           <tr>
@@ -74,6 +114,8 @@ function AiRagPage() {
             <th>구분</th>
             <th>채팅 모델</th>
             <th>임베딩 모델</th>
+            <th>상태</th>
+            <th>동작</th>
           </tr>
         </thead>
         <tbody>
@@ -84,6 +126,13 @@ function AiRagPage() {
               <td>{provider.provider_type}</td>
               <td>{provider.chat_model}</td>
               <td>{provider.embedding_model}</td>
+              <td>{provider.active_yn === "Y" ? "활성" : "비활성"}</td>
+              <td>
+                <button onClick={() => setEditingProviderId(provider.provider_id)}>수정</button>
+                {provider.active_yn === "Y" && (
+                  <button onClick={() => handleDeactivateProvider(provider)}>비활성화</button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -92,14 +141,23 @@ function AiRagPage() {
       <div className="admin-page-header">
         <h2 className="policy-section-title">문서 목록 (인덱싱)</h2>
         {!showDocForm && <button onClick={() => setShowDocForm(true)}>+ 문서 등록</button>}
-    </div>
-    {showDocForm && (
+      </div>
+      {showDocForm && (
         <DocumentForm
-        providers={providers}
-        onSaved={() => { setShowDocForm(false); loadAll(); }}
-        onCancel={() => setShowDocForm(false)}
-    />
-)}
+          providers={providers}
+          onSaved={() => { setShowDocForm(false); loadAll(); }}
+          onCancel={() => setShowDocForm(false)}
+        />
+      )}
+
+      {editingDocumentId && (
+        <DocumentEditPanel
+          document={documents.find((d) => d.document_id === editingDocumentId)}
+          onSaved={() => { setEditingDocumentId(null); loadAll(); }}
+          onCancel={() => setEditingDocumentId(null)}
+        />
+      )}
+
       <table className="admin-table">
         <thead>
           <tr>
@@ -122,6 +180,8 @@ function AiRagPage() {
                 >
                   {indexingId === doc.document_id ? "인덱싱 중..." : "인덱싱 실행"}
                 </button>
+                <button onClick={() => setEditingDocumentId(doc.document_id)}>수정</button>
+                <button onClick={() => handleDeleteDocument(doc)}>삭제</button>
               </td>
             </tr>
           ))}

@@ -6,12 +6,22 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import require_role, CurrentUser
 from app.models.ai import AIProvider, RagDocument, RagChunk, RagEmbedding
-from app.schemas.ai import RagDocumentCreate, RagDocumentResponse, RagChunkResponse
+from app.schemas.ai import RagDocumentCreate, RagDocumentUpdate, RagDocumentResponse, RagChunkResponse
 from app.services.chunking import split_into_chunks
 from app.services.embeddings import get_embedding
 from app.services.vector_store import upsert_chunk_vector, delete_chunk_vector, COLLECTION_NAME
 
 router = APIRouter(prefix="/api/admin/ai/documents", tags=["rag-documents"])
+
+
+def _delete_document_chunks(document_id: int, db: Session):
+    """문서에 딸린 청크/임베딩/Qdrant 벡터를 전부 정리하는 공용 함수."""
+    old_chunks = db.query(RagChunk).filter(RagChunk.document_id == document_id).all()
+    for c in old_chunks:
+        delete_chunk_vector(c.chunk_id)
+        db.query(RagEmbedding).filter(RagEmbedding.chunk_id == c.chunk_id).delete()
+        db.delete(c)
+    db.commit()
 
 
 @router.get("", response_model=List[RagDocumentResponse])
@@ -33,6 +43,47 @@ def create_document(
     db.commit()
     db.refresh(document)
     return document
+
+
+@router.put("/{document_id}", response_model=RagDocumentResponse)
+def update_document(
+    document_id: int,
+    payload: RagDocumentUpdate,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("ADMIN")),
+):
+    document = db.query(RagDocument).filter(RagDocument.document_id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(document, field, value)
+
+    # 원문 내용이 바뀌면 기존 인덱싱은 더 이상 최신 내용을 반영하지 못하므로
+    # 상태를 READY로 되돌리고, 기존 청크/임베딩은 정리한다 (재인덱싱은 관리자가 버튼으로 실행)
+    if "content_text" in update_data:
+        _delete_document_chunks(document_id, db)
+        document.document_status = "READY"
+
+    db.commit()
+    db.refresh(document)
+    return document
+
+
+@router.delete("/{document_id}", status_code=204)
+def delete_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_role("ADMIN")),
+):
+    document = db.query(RagDocument).filter(RagDocument.document_id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
+
+    _delete_document_chunks(document_id, db)
+    db.delete(document)
+    db.commit()
 
 
 @router.get("/{document_id}/chunks", response_model=List[RagChunkResponse])
@@ -77,13 +128,7 @@ def index_document(
     document.document_status = "PROCESSING"
     db.commit()
 
-    # 재인덱싱 지원: 기존 청크/임베딩/Qdrant 벡터 정리
-    old_chunks = db.query(RagChunk).filter(RagChunk.document_id == document_id).all()
-    for c in old_chunks:
-        delete_chunk_vector(c.chunk_id)
-        db.query(RagEmbedding).filter(RagEmbedding.chunk_id == c.chunk_id).delete()
-        db.delete(c)
-    db.commit()
+    _delete_document_chunks(document_id, db)
 
     texts = split_into_chunks(document.content_text)
     created_chunks = []

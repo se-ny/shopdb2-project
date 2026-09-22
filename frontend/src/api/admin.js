@@ -1,7 +1,7 @@
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 function authHeader() {
-  const saved = localStorage.getItem("auth");
+  const saved = sessionStorage.getItem("auth");
   if (!saved) return {};
   const { access_token } = JSON.parse(saved);
   return { Authorization: `Bearer ${access_token}` };
@@ -147,6 +147,23 @@ export async function fetchProviders() {
   return handleResponse(response);
 }
 
+export async function updateProvider(providerId, payload) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/ai/providers/${providerId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+export async function deactivateProvider(providerId) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/ai/providers/${providerId}`, {
+    method: "DELETE",
+    headers: authHeader(),
+  });
+  return handleResponse(response);
+}
+
 export async function fetchDocuments() {
   const response = await fetch(`${API_BASE_URL}/api/admin/ai/documents`, {
     headers: authHeader(),
@@ -169,6 +186,28 @@ export async function indexDocument(documentId) {
     headers: authHeader(),
   });
   return handleResponse(response);
+}
+
+export async function updateDocument(documentId, payload) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/ai/documents/${documentId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+export async function deleteDocument(documentId) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/ai/documents/${documentId}`, {
+    method: "DELETE",
+    headers: authHeader(),
+  });
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.detail || `HTTP ${response.status}`);
+  }
+  // 204 No Content라 body가 없음
+  return true;
 }
 
 export async function queryRag(payload) {

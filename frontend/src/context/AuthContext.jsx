@@ -3,9 +3,12 @@ import { createContext, useContext, useState } from "react";
 const AuthContext = createContext(null);
 const API_BASE_URL = "http://127.0.0.1:8000";
 
+// 예전에 localStorage에 남아있던 로그인 정보 정리
+localStorage.removeItem("auth");
+
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(() => {
-    const saved = localStorage.getItem("auth");
+    const saved = sessionStorage.getItem("auth");
     return saved ? JSON.parse(saved) : null;
   });
 
@@ -21,13 +24,13 @@ export function AuthProvider({ children }) {
     }
     const data = await response.json();
     setAuth(data);
-    localStorage.setItem("auth", JSON.stringify(data));
+    sessionStorage.setItem("auth", JSON.stringify(data));
     return data;
   }
 
   function logout() {
     setAuth(null);
-    localStorage.removeItem("auth");
+    sessionStorage.removeItem("auth");
   }
 
   function hasRole(role) {

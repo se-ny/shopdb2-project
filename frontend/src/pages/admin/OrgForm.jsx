@@ -9,9 +9,13 @@ function OrgForm({ editingOrg, onSaved, onCancel }) {
     org_name: editingOrg?.org_name ?? "",
     org_type: editingOrg?.org_type ?? "BRANCH",
     parent_org_id: editingOrg?.parent_org_id ?? "",
+    business_number: editingOrg?.business_number ?? "",
     representative_name: editingOrg?.representative_name ?? "",
     phone: editingOrg?.phone ?? "",
     email: editingOrg?.email ?? "",
+    zipcode: editingOrg?.zipcode ?? "",
+    address1: editingOrg?.address1 ?? "",
+    address2: editingOrg?.address2 ?? "",
   });
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -86,6 +90,15 @@ function OrgForm({ editingOrg, onSaved, onCancel }) {
       </label>
 
       <label>
+        사업자등록번호
+        <input
+          value={form.business_number}
+          onChange={(e) => handleChange("business_number", e.target.value)}
+          placeholder="예: 111-11-11111"
+        />
+      </label>
+
+      <label>
         대표자명
         <input
           value={form.representative_name}
@@ -101,6 +114,28 @@ function OrgForm({ editingOrg, onSaved, onCancel }) {
       <label>
         이메일
         <input value={form.email} onChange={(e) => handleChange("email", e.target.value)} />
+      </label>
+
+      <label>
+        우편번호
+        <input value={form.zipcode} onChange={(e) => handleChange("zipcode", e.target.value)} />
+      </label>
+
+      <label>
+        주소
+        <input
+          value={form.address1}
+          onChange={(e) => handleChange("address1", e.target.value)}
+          placeholder="예: 서울특별시 강남구"
+        />
+      </label>
+
+      <label>
+        상세주소
+        <input
+          value={form.address2}
+          onChange={(e) => handleChange("address2", e.target.value)}
+        />
       </label>
 
       {errorMessage && <p className="error-message">{errorMessage}</p>}
