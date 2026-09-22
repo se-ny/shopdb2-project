@@ -83,3 +83,15 @@ class RagQueryLog(Base):
     completion_tokens = Column(Integer, default=0)
     response_time_ms = Column(Integer, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+
+class AiResponseFeedback(Base):
+    __tablename__ = "ai_response_feedback"
+
+    feedback_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    feedback_code = Column(String(50), unique=True, nullable=False)
+    source_type = Column(Enum("RAG", "SQL_AGENT", name="feedback_source_type_enum"), nullable=False)
+    source_log_id = Column(BigInteger, nullable=False)
+    user_id = Column(BigInteger, ForeignKey("users.user_id"), nullable=True)
+    feedback_score = Column(Enum("GOOD", "BAD", name="feedback_score_enum"), nullable=False)
+    feedback_reason = Column(String(500), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())

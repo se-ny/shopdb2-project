@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "dev-secret-change-me"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24  # 24시간
+    redis_url: str = "redis://localhost:6379/0"
+    refund_delay_alert_days: int = 3  # 이 기간 넘게 REQUESTED/REVIEWING 상태면 지연 알림
     
 
     model_config = SettingsConfigDict(

@@ -7,6 +7,21 @@ ProviderType = Literal["CLOUD", "LOCAL"]
 SourceType = Literal["DATABASE", "FILE", "URL", "API", "MANUAL"]
 DocumentStatus = Literal["READY", "PROCESSING", "INDEXED", "ERROR"]
 
+class AIProviderUpdate(BaseModel):
+    provider_name: Optional[str] = None
+    base_url: Optional[str] = None
+    chat_model: Optional[str] = None
+    embedding_model: Optional[str] = None
+    active_yn: Optional[Literal["Y", "N"]] = None
+
+
+class AIProviderCreate(BaseModel):
+    provider_code: str
+    provider_name: str
+    provider_type: ProviderType
+    base_url: Optional[str] = None
+    chat_model: Optional[str] = None
+    embedding_model: Optional[str] = None
 
 class AIProviderResponse(BaseModel):
     provider_id: int
@@ -32,6 +47,15 @@ class RagDocumentCreate(BaseModel):
     content_text: str
     version: Optional[str] = None
 
+class RagDocumentUpdate(BaseModel):
+    document_name: Optional[str] = None
+    document_type: Optional[str] = None
+    source_type: Optional[SourceType] = None
+    source_uri: Optional[str] = None
+    content_text: Optional[str] = None
+    version: Optional[str] = None
+    org_id: Optional[int] = None
+    provider_id: Optional[int] = None
 
 class RagDocumentResponse(BaseModel):
     document_id: int
@@ -70,6 +94,7 @@ class RagQueryRequest(BaseModel):
 
 
 class RagQueryResponse(BaseModel):
+    query_log_id: int
     answer: str
     retrieved_chunks: List[RagChunkResponse]
     response_time_ms: int

@@ -582,7 +582,6 @@ def release_order_reserved_inventory(
         stock_before = int(
             item["stock_quantity"]
         )
-
         reserved_before = int(
             item["reserved_quantity"]
         )
@@ -597,7 +596,7 @@ def release_order_reserved_inventory(
             reserved_before - quantity
         )
 
-        # 전체취소에서는 실제 재고는 변경하지 않음
+        # 실제 재고는 변경하지 않음
         stock_after = stock_before
 
         db.execute(
@@ -664,3 +663,49 @@ def release_order_reserved_inventory(
                     order_id,
             },
         )
+
+
+def list_payments_admin(
+    db: Session,
+    payment_status: str | None = None,
+    skip: int = 0,
+    limit: int = 20,
+):
+    where_clause = ""
+    params = {"skip": skip, "limit": limit}
+
+    if payment_status:
+        where_clause = "WHERE p.payment_status = :payment_status"
+        params["payment_status"] = payment_status
+
+    rows = db.execute(
+        text(
+            f"""
+            SELECT
+                p.payment_id, p.order_id, o.order_no, u.user_name AS buyer_name,
+                p.pg_provider, p.payment_status,
+                p.requested_amount, p.approved_amount,
+                p.cancelled_amount, p.balance_amount, p.created_at
+            FROM payments p
+            JOIN orders o ON o.order_id = p.order_id
+            JOIN users u ON u.user_id = o.buyer_user_id
+            {where_clause}
+            ORDER BY p.payment_id DESC
+            LIMIT :limit OFFSET :skip
+            """
+        ),
+        params,
+    ).mappings().all()
+
+    total = db.execute(
+        text(
+            f"""
+            SELECT COUNT(*) AS cnt
+            FROM payments p
+            {where_clause}
+            """
+        ),
+        {k: v for k, v in params.items() if k not in ("skip", "limit")},
+    ).scalar()
+
+    return rows, total

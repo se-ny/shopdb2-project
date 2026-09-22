@@ -47,7 +47,7 @@ def query_rag(
 
     elapsed_ms = int((time.perf_counter() - start) * 1000)
 
-    db.add(RagQueryLog(
+    log = RagQueryLog(
         user_id=current_user.user_id,  # 클라이언트가 보낸 값 대신 토큰의 진짜 user_id 사용
         provider_id=provider.provider_id,
         question_text=payload.question,
@@ -56,10 +56,14 @@ def query_rag(
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,
         response_time_ms=elapsed_ms,
-    ))
+    )
+    db.add(log)
+    db.flush()  # query_log_id를 응답에 내려주기 위해 commit 전에 INSERT 반영
+
     db.commit()
 
     return RagQueryResponse(
+        query_log_id=log.query_log_id,
         answer=answer,
         retrieved_chunks=ordered_chunks,
         response_time_ms=elapsed_ms,

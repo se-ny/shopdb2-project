@@ -29,10 +29,18 @@ import RequireAdmin from "./components/RequireAdmin";
 // ============================================================
 
 import AdminLayout from "./pages/admin/AdminLayout";
+import Dashboard from "./pages/admin/Dashboard";
 import OrgList from "./pages/admin/OrgList";
+import OrderManagePage from "./pages/admin/OrderManagePage";
 import UserList from "./pages/admin/UserList";
 import PolicyList from "./pages/admin/PolicyList";
+import PaymentRefundPage from "./pages/admin/PaymentRefundPage";
 import AiRagPage from "./pages/admin/AiRagPage";
+import FeedbackStats from "./pages/admin/FeedbackStats";
+import SqlAgentPage from "./pages/admin/SqlAgentPage";
+import AlertList from "./pages/admin/AlertList";
+import ActionLogList from "./pages/admin/ActionLogList";
+import ProductApprovalPage from "./pages/admin/ProductApprovalPage";
 
 
 const API_BASE_URL = "http://127.0.0.1:8000";
@@ -343,8 +351,23 @@ function App() {
             }
           >
             <Route
+              index
+              element={<Dashboard />}
+            />
+
+            <Route
+              path="dashboard"
+              element={<Dashboard />}
+            />
+
+            <Route
               path="orgs"
               element={<OrgList />}
+            />
+
+            <Route
+              path="orders"
+              element={<OrderManagePage />}
             />
 
             <Route
@@ -358,8 +381,38 @@ function App() {
             />
 
             <Route
+              path="payments"
+              element={<PaymentRefundPage />}
+            />
+
+            <Route
               path="ai"
               element={<AiRagPage />}
+            />
+
+            <Route
+              path="feedback"
+              element={<FeedbackStats />}
+            />
+
+            <Route
+              path="sql-agent"
+              element={<SqlAgentPage />}
+            />
+
+            <Route
+              path="alerts"
+              element={<AlertList />}
+            />
+
+            <Route
+              path="logs"
+              element={<ActionLogList />}
+            />
+
+            <Route
+              path="products"
+              element={<ProductApprovalPage />}
             />
           </Route>
 

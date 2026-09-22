@@ -30,3 +30,5 @@ backup/
 
 # Generated manual test evidence
 backend/tests_manual/evidence/
+
+celerybeat-schedule*
