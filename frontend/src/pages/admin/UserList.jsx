@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { fetchUsers, fetchRoles } from "../../api/admin";
+import { fetchUsers, fetchRoles, withdrawUser } from "../../api/admin";
 import UserEditPanel from "./UserEditPanel";
+import UserCreateForm from "./UserCreateForm";
 
 function UserList() {
   const [users, setUsers] = useState([]);
@@ -8,6 +9,7 @@ function UserList() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [editingUserId, setEditingUserId] = useState(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   function loadAll() {
     setLoading(true);
@@ -24,6 +26,16 @@ function UserList() {
     loadAll();
   }, []);
 
+  async function handleWithdraw(user) {
+    if (!confirm(`"${user.user_name}"님을 탈퇴 처리하시겠습니까?`)) return;
+    try {
+      await withdrawUser(user.user_id);
+      loadAll();
+    } catch (error) {
+      alert(`처리 실패: ${error.message}`);
+    }
+  }
+
   const editingUser = users.find((u) => u.user_id === editingUserId);
 
   if (loading) return <p>불러오는 중...</p>;
@@ -31,7 +43,18 @@ function UserList() {
 
   return (
     <div>
-      <h1>회원/권한 관리</h1>
+      <div className="admin-page-header">
+        <h1>회원/권한 관리</h1>
+        {!showCreateForm && <button onClick={() => setShowCreateForm(true)}>+ 회원 등록</button>}
+      </div>
+
+      {showCreateForm && (
+        <UserCreateForm
+          allRoles={allRoles}
+          onSaved={() => { setShowCreateForm(false); loadAll(); }}
+          onCancel={() => setShowCreateForm(false)}
+        />
+      )}
 
       {editingUser && (
         <UserEditPanel
@@ -71,6 +94,9 @@ function UserList() {
               <td>{user.user_status}</td>
               <td>
                 <button onClick={() => setEditingUserId(user.user_id)}>수정</button>
+                {user.user_status !== "WITHDRAWN" && (
+                  <button onClick={() => handleWithdraw(user)}>탈퇴</button>
+                )}
               </td>
             </tr>
           ))}

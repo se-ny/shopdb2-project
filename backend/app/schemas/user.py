@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 UserStatus = Literal["ACTIVE", "INACTIVE", "SUSPENDED", "WITHDRAWN"]
 
@@ -34,6 +34,17 @@ class UserUpdate(BaseModel):
     """상태 변경, 소속 조직 이동만 허용 (로그인 정보는 여기서 수정하지 않음)."""
     org_id: Optional[int] = None
     user_status: Optional[UserStatus] = None
+
+
+class UserCreate(BaseModel):
+    """관리자가 직접 계정을 발급할 때 사용 (예: 관리자 계정, 테스트 계정)."""
+    login_id: str
+    password: str
+    user_name: str
+    email: EmailStr
+    phone: Optional[str] = None
+    org_id: Optional[int] = None
+    role_ids: List[int] = []
 
 
 class RoleAssign(BaseModel):

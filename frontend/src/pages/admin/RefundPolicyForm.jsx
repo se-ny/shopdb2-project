@@ -1,17 +1,19 @@
 import { useState } from "react";
-import { createRefundPolicy } from "../../api/admin";
+import { createRefundPolicy, updateRefundPolicy } from "../../api/admin";
 
-function RefundPolicyForm({ onSaved, onCancel }) {
+function RefundPolicyForm({ editingPolicy, onSaved, onCancel }) {
+  const isEdit = !!editingPolicy;
+
   const [form, setForm] = useState({
-    policy_name: "",
-    allowed_days: 7,
-    unopened_refund_yn: "Y",
-    opened_refund_yn: "N",
-    defective_refund_yn: "Y",
-    shipping_fee_payer: "BUYER",
-    refund_policy_text: "",
-    effective_from: "",
-    org_id: "",
+    policy_name: editingPolicy?.policy_name ?? "",
+    allowed_days: editingPolicy?.allowed_days ?? 7,
+    unopened_refund_yn: editingPolicy?.unopened_refund_yn ?? "Y",
+    opened_refund_yn: editingPolicy?.opened_refund_yn ?? "N",
+    defective_refund_yn: editingPolicy?.defective_refund_yn ?? "Y",
+    shipping_fee_payer: editingPolicy?.shipping_fee_payer ?? "BUYER",
+    refund_policy_text: editingPolicy?.refund_policy_text ?? "",
+    effective_from: editingPolicy?.effective_from ?? "",
+    org_id: editingPolicy?.org_id ?? "",
   });
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -29,11 +31,24 @@ function RefundPolicyForm({ onSaved, onCancel }) {
     setSaving(true);
     setErrorMessage("");
     try {
-      await createRefundPolicy({
-        ...form,
-        allowed_days: Number(form.allowed_days),
-        org_id: form.org_id ? Number(form.org_id) : null,
-      });
+      if (isEdit) {
+        await updateRefundPolicy(editingPolicy.refund_policy_id, {
+          policy_name: form.policy_name,
+          allowed_days: Number(form.allowed_days),
+          unopened_refund_yn: form.unopened_refund_yn,
+          opened_refund_yn: form.opened_refund_yn,
+          defective_refund_yn: form.defective_refund_yn,
+          shipping_fee_payer: form.shipping_fee_payer,
+          refund_policy_text: form.refund_policy_text,
+          effective_from: form.effective_from,
+        });
+      } else {
+        await createRefundPolicy({
+          ...form,
+          allowed_days: Number(form.allowed_days),
+          org_id: form.org_id ? Number(form.org_id) : null,
+        });
+      }
       onSaved();
     } catch (error) {
       setErrorMessage(error.message);
@@ -44,7 +59,7 @@ function RefundPolicyForm({ onSaved, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit} className="admin-form">
-      <h2>환불정책 새 버전 등록</h2>
+      <h2>{isEdit ? "환불정책 수정" : "환불정책 새 버전 등록"}</h2>
       <label>
         정책명
         <input value={form.policy_name} onChange={(e) => handleChange("policy_name", e.target.value)} required />
@@ -53,14 +68,16 @@ function RefundPolicyForm({ onSaved, onCancel }) {
         허용일수
         <input type="number" value={form.allowed_days} onChange={(e) => handleChange("allowed_days", e.target.value)} required />
       </label>
-      <label>
-        적용 조직 ID (비워두면 전사 공통)
-        <input
-          type="number"
-          value={form.org_id}
-          onChange={(e) => handleChange("org_id", e.target.value)}
-        />
-      </label>
+      {!isEdit && (
+        <label>
+          적용 조직 ID (비워두면 전사 공통)
+          <input
+            type="number"
+            value={form.org_id}
+            onChange={(e) => handleChange("org_id", e.target.value)}
+          />
+        </label>
+      )}
 
       <label style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <input
@@ -107,7 +124,7 @@ function RefundPolicyForm({ onSaved, onCancel }) {
       {errorMessage && <p className="error-message">{errorMessage}</p>}
 
       <div className="admin-form-actions">
-        <button type="submit" disabled={saving}>{saving ? "저장 중..." : "등록"}</button>
+        <button type="submit" disabled={saving}>{saving ? "저장 중..." : isEdit ? "수정 저장" : "등록"}</button>
         <button type="button" onClick={onCancel} disabled={saving}>취소</button>
       </div>
     </form>

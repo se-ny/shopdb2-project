@@ -45,6 +45,7 @@ import SqlAgentPage from "./pages/admin/SqlAgentPage";
 import AlertList from "./pages/admin/AlertList";
 import ActionLogList from "./pages/admin/ActionLogList";
 import ProductApprovalPage from "./pages/admin/ProductApprovalPage";
+import CategoryList from "./pages/admin/CategoryList";
 
 
 const API_BASE_URL = "http://127.0.0.1:8000";
@@ -510,6 +511,11 @@ function App() {
             <Route
               path="products"
               element={<ProductApprovalPage />}
+            />
+
+            <Route
+              path="categories"
+              element={<CategoryList />}
             />
           </Route>
 

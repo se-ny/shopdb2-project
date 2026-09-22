@@ -77,6 +77,23 @@ export async function updateUser(userId, payload) {
   return handleResponse(response);
 }
 
+export async function createUser(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+export async function withdrawUser(userId) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
+    method: "DELETE",
+    headers: authHeader(),
+  });
+  return handleResponse(response);
+}
+
 export async function assignRole(userId, roleId) {
   const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/roles`, {
     method: "POST",
@@ -118,6 +135,15 @@ export async function createCompanyPolicy(payload) {
   return handleResponse(response);
 }
 
+export async function updateCompanyPolicy(policyId, payload) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/policies/company/${policyId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
 export async function expireCompanyPolicy(policyId) {
   const response = await fetch(`${API_BASE_URL}/api/admin/policies/company/${policyId}/expire`, {
     method: "PATCH",
@@ -129,6 +155,15 @@ export async function expireCompanyPolicy(policyId) {
 export async function createRefundPolicy(payload) {
   const response = await fetch(`${API_BASE_URL}/api/admin/policies/refund`, {
     method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+export async function updateRefundPolicy(refundPolicyId, payload) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/policies/refund/${refundPolicyId}`, {
+    method: "PUT",
     headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify(payload),
   });
@@ -404,6 +439,39 @@ export async function approveProduct(productId) {
 export async function rejectProduct(productId) {
   const response = await fetch(`${API_BASE_URL}/api/admin/products/${productId}/reject`, {
     method: "PATCH",
+    headers: authHeader(),
+  });
+  return handleResponse(response);
+}
+// ---- 카테고리관리 ----
+export async function fetchCategories() {
+  const response = await fetch(`${API_BASE_URL}/api/admin/categories`, {
+    headers: authHeader(),
+  });
+  return handleResponse(response);
+}
+
+export async function createCategory(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/categories`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+export async function updateCategory(categoryId, payload) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/categories/${categoryId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+export async function deactivateCategory(categoryId) {
+  const response = await fetch(`${API_BASE_URL}/api/admin/categories/${categoryId}`, {
+    method: "DELETE",
     headers: authHeader(),
   });
   return handleResponse(response);
