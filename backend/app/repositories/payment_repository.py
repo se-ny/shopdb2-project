@@ -582,6 +582,7 @@ def release_order_reserved_inventory(
         stock_before = int(
             item["stock_quantity"]
         )
+
         reserved_before = int(
             item["reserved_quantity"]
         )
@@ -596,7 +597,7 @@ def release_order_reserved_inventory(
             reserved_before - quantity
         )
 
-        # 실제 재고는 변경하지 않음
+        # 전체취소에서는 실제 재고는 변경하지 않음
         stock_after = stock_before
 
         db.execute(
@@ -615,7 +616,51 @@ def release_order_reserved_inventory(
             },
         )
 
-        # MVP NOTE:
-        # The current DB does not contain the inventory_movements table.
-        # Keep reservation release working; movement-history INSERT is deferred
-        # until the team confirms/creates that table.
+        db.execute(
+            text(
+                """
+                INSERT INTO inventory_movements
+                (
+                    inventory_id,
+                    movement_type,
+                    quantity_change,
+                    stock_before,
+                    stock_after,
+                    reserved_before,
+                    reserved_after,
+                    reference_type,
+                    reference_id,
+                    reason,
+                    changed_by_user_id
+                )
+                VALUES
+                (
+                    :inventory_id,
+                    'RELEASE',
+                    0,
+                    :stock_before,
+                    :stock_after,
+                    :reserved_before,
+                    :reserved_after,
+                    'ORDER',
+                    :order_id,
+                    '결제 전체 취소로 예약재고 해제',
+                    NULL
+                )
+                """
+            ),
+            {
+                "inventory_id":
+                    item["inventory_id"],
+                "stock_before":
+                    stock_before,
+                "stock_after":
+                    stock_after,
+                "reserved_before":
+                    reserved_before,
+                "reserved_after":
+                    reserved_after,
+                "order_id":
+                    order_id,
+            },
+        )
