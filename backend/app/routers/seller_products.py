@@ -1056,3 +1056,459 @@ def get_inventory_movements(
     ).mappings().all()
 
     return [dict(row) for row in rows]
+
+
+@router.get(
+    "/{product_id}/images",
+    response_model=list[ProductImageOut],
+)
+def get_product_images(
+    product_id: int,
+    db: Session = Depends(get_db),
+):
+    product_exists = db.execute(
+        text(
+            """
+            SELECT 1
+            FROM products
+            WHERE product_id = :product_id
+            """
+        ),
+        {"product_id": product_id},
+    ).first()
+
+    if product_exists is None:
+        raise HTTPException(
+            status_code=404,
+            detail="상품을 찾을 수 없습니다.",
+        )
+
+    rows = db.execute(
+        text(
+            """
+            SELECT
+                pi.product_image_id,
+                pi.product_id,
+                pi.file_id,
+                fa.public_url,
+                fa.thumbnail_url,
+                pi.image_type,
+                pi.alt_text,
+                pi.display_order,
+                pi.active_yn
+            FROM product_images pi
+            JOIN file_assets fa
+                ON pi.file_id = fa.file_id
+            WHERE pi.product_id = :product_id
+            ORDER BY
+                pi.display_order,
+                pi.product_image_id
+            """
+        ),
+        {"product_id": product_id},
+    ).mappings().all()
+
+    return [
+        ProductImageOut(**dict(row))
+        for row in rows
+    ]
+
+
+@router.post(
+    "/{product_id}/images",
+    response_model=ProductImageOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_product_image(
+    product_id: int,
+    payload: ProductImageCreate,
+    seller_user_id: int = Query(..., ge=1),
+    db: Session = Depends(get_db),
+):
+    _require_product_owner(
+        product_id,
+        seller_user_id,
+        db,
+    )
+
+    try:
+        file_result = db.execute(
+            text(
+                """
+                INSERT INTO file_assets
+                (
+                    file_type,
+                    storage_type,
+                    original_file_name,
+                    public_url,
+                    thumbnail_url,
+                    active_yn
+                )
+                VALUES
+                (
+                    'IMAGE',
+                    'URL',
+                    :original_file_name,
+                    :public_url,
+                    :thumbnail_url,
+                    'Y'
+                )
+                """
+            ),
+            {
+                "original_file_name":
+                    payload.original_file_name,
+                "public_url":
+                    payload.public_url,
+                "thumbnail_url":
+                    payload.thumbnail_url,
+            },
+        )
+
+        file_id = file_result.lastrowid
+
+        if payload.image_type == "MAIN":
+            db.execute(
+                text(
+                    """
+                    UPDATE product_images
+                    SET active_yn = 'N'
+                    WHERE product_id = :product_id
+                      AND image_type = 'MAIN'
+                    """
+                ),
+                {"product_id": product_id},
+            )
+
+        image_result = db.execute(
+            text(
+                """
+                INSERT INTO product_images
+                (
+                    product_id,
+                    file_id,
+                    image_type,
+                    alt_text,
+                    display_order,
+                    active_yn
+                )
+                VALUES
+                (
+                    :product_id,
+                    :file_id,
+                    :image_type,
+                    :alt_text,
+                    :display_order,
+                    'Y'
+                )
+                """
+            ),
+            {
+                "product_id": product_id,
+                "file_id": file_id,
+                "image_type":
+                    payload.image_type,
+                "alt_text":
+                    payload.alt_text,
+                "display_order":
+                    payload.display_order,
+            },
+        )
+
+        db.commit()
+
+    except Exception as exc:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=400,
+            detail=f"상품 이미지 등록 실패: {exc}",
+        ) from exc
+
+    row = db.execute(
+        text(
+            """
+            SELECT
+                pi.product_image_id,
+                pi.product_id,
+                pi.file_id,
+                fa.public_url,
+                fa.thumbnail_url,
+                pi.image_type,
+                pi.alt_text,
+                pi.display_order,
+                pi.active_yn
+            FROM product_images pi
+            JOIN file_assets fa
+                ON pi.file_id = fa.file_id
+            WHERE pi.product_image_id =
+                :product_image_id
+            """
+        ),
+        {
+            "product_image_id":
+                image_result.lastrowid,
+        },
+    ).mappings().first()
+
+    return ProductImageOut(**dict(row))
+
+
+@router.put(
+    "/{product_id}/images/{product_image_id}",
+    response_model=ProductImageOut,
+)
+def update_product_image(
+    product_id: int,
+    product_image_id: int,
+    payload: ProductImageUpdate,
+    seller_user_id: int = Query(..., ge=1),
+    db: Session = Depends(get_db),
+):
+    _require_product_owner(
+        product_id,
+        seller_user_id,
+        db,
+    )
+
+    current = db.execute(
+        text(
+            """
+            SELECT
+                pi.product_image_id,
+                pi.file_id
+            FROM product_images pi
+            WHERE pi.product_image_id =
+                :product_image_id
+              AND pi.product_id =
+                :product_id
+            """
+        ),
+        {
+            "product_image_id":
+                product_image_id,
+            "product_id":
+                product_id,
+        },
+    ).mappings().first()
+
+    if current is None:
+        raise HTTPException(
+            status_code=404,
+            detail="상품 이미지를 찾을 수 없습니다.",
+        )
+
+    data = payload.model_dump(
+        exclude_unset=True,
+    )
+
+    try:
+        file_fields = []
+        file_params = {
+            "file_id": current["file_id"],
+        }
+
+        if "public_url" in data:
+            file_fields.append(
+                "public_url = :public_url"
+            )
+            file_params["public_url"] = (
+                data["public_url"]
+            )
+
+        if "thumbnail_url" in data:
+            file_fields.append(
+                "thumbnail_url = :thumbnail_url"
+            )
+            file_params["thumbnail_url"] = (
+                data["thumbnail_url"]
+            )
+
+        if file_fields:
+            db.execute(
+                text(
+                    f"""
+                    UPDATE file_assets
+                    SET {", ".join(file_fields)}
+                    WHERE file_id = :file_id
+                    """
+                ),
+                file_params,
+            )
+
+        image_data = {
+            key: value
+            for key, value in data.items()
+            if key
+            not in {
+                "public_url",
+                "thumbnail_url",
+            }
+        }
+
+        if image_data.get("image_type") == "MAIN":
+            db.execute(
+                text(
+                    """
+                    UPDATE product_images
+                    SET active_yn = 'N'
+                    WHERE product_id = :product_id
+                      AND image_type = 'MAIN'
+                      AND product_image_id !=
+                          :product_image_id
+                    """
+                ),
+                {
+                    "product_id": product_id,
+                    "product_image_id":
+                        product_image_id,
+                },
+            )
+
+        if image_data:
+            fields = []
+            params = {
+                "product_image_id":
+                    product_image_id,
+            }
+
+            for key, value in image_data.items():
+                fields.append(
+                    f"{key} = :{key}"
+                )
+                params[key] = value
+
+            db.execute(
+                text(
+                    f"""
+                    UPDATE product_images
+                    SET {", ".join(fields)}
+                    WHERE product_image_id =
+                        :product_image_id
+                    """
+                ),
+                params,
+            )
+
+        db.commit()
+
+    except Exception as exc:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=400,
+            detail=f"상품 이미지 수정 실패: {exc}",
+        ) from exc
+
+    row = db.execute(
+        text(
+            """
+            SELECT
+                pi.product_image_id,
+                pi.product_id,
+                pi.file_id,
+                fa.public_url,
+                fa.thumbnail_url,
+                pi.image_type,
+                pi.alt_text,
+                pi.display_order,
+                pi.active_yn
+            FROM product_images pi
+            JOIN file_assets fa
+                ON pi.file_id = fa.file_id
+            WHERE pi.product_image_id =
+                :product_image_id
+            """
+        ),
+        {
+            "product_image_id":
+                product_image_id,
+        },
+    ).mappings().first()
+
+    return ProductImageOut(**dict(row))
+
+
+@router.delete(
+    "/{product_id}/images/{product_image_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_product_image(
+    product_id: int,
+    product_image_id: int,
+    seller_user_id: int = Query(..., ge=1),
+    db: Session = Depends(get_db),
+):
+    _require_product_owner(
+        product_id,
+        seller_user_id,
+        db,
+    )
+
+    current = db.execute(
+        text(
+            """
+            SELECT
+                product_image_id,
+                file_id
+            FROM product_images
+            WHERE product_image_id =
+                :product_image_id
+              AND product_id = :product_id
+            """
+        ),
+        {
+            "product_image_id":
+                product_image_id,
+            "product_id":
+                product_id,
+        },
+    ).mappings().first()
+
+    if current is None:
+        raise HTTPException(
+            status_code=404,
+            detail="상품 이미지를 찾을 수 없습니다.",
+        )
+
+    try:
+        db.execute(
+            text(
+                """
+                UPDATE product_images
+                SET active_yn = 'N'
+                WHERE product_image_id =
+                    :product_image_id
+                """
+            ),
+            {
+                "product_image_id":
+                    product_image_id,
+            },
+        )
+
+        db.execute(
+            text(
+                """
+                UPDATE file_assets
+                SET active_yn = 'N'
+                WHERE file_id = :file_id
+                """
+            ),
+            {
+                "file_id":
+                    current["file_id"],
+            },
+        )
+
+        db.commit()
+
+    except Exception as exc:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=400,
+            detail=f"상품 이미지 삭제 실패: {exc}",
+        ) from exc
+
+    return None
