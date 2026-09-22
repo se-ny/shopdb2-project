@@ -11,7 +11,11 @@ async function request(url, options = {}) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+    const error = new Error(
+      errorText || `HTTP ${response.status}`,
+    );
+    error.status = response.status;
+    throw error;
   }
 
   if (response.status === 204) {
@@ -24,19 +28,43 @@ async function request(url, options = {}) {
 export function getProducts(params = {}) {
   const query = new URLSearchParams();
 
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      query.set(key, value);
-    }
-  });
+  Object.entries(params).forEach(
+    ([key, value]) => {
+      if (
+        value !== undefined &&
+        value !== null &&
+        value !== ""
+      ) {
+        query.set(key, value);
+      }
+    },
+  );
 
-  const suffix = query.toString() ? `?${query.toString()}` : "";
+  const suffix = query.toString()
+    ? `?${query.toString()}`
+    : "";
 
   return request(`/products${suffix}`);
 }
 
 export function getProduct(productId) {
   return request(`/products/${productId}`);
+}
+
+export async function getProductFiles(productId) {
+  try {
+    return await request(
+      `/products/${productId}/files`,
+    );
+  } catch (error) {
+    // 현재 백엔드에 /files 조회 API가 없으면
+    // 상품 상세 전체 로딩이 실패하지 않도록 빈 배열로 처리합니다.
+    if (error.status === 404) {
+      return [];
+    }
+
+    throw error;
+  }
 }
 
 export function createProduct(product) {
@@ -46,57 +74,163 @@ export function createProduct(product) {
   });
 }
 
-export function updateProduct(productId, product) {
+export function updateProduct(
+  productId,
+  product,
+) {
   return request(`/products/${productId}`, {
     method: "PUT",
     body: JSON.stringify(product),
   });
 }
 
-export function deleteProduct(productId) {
-  return request(`/products/${productId}`, {
-    method: "DELETE",
+export function deleteProduct(
+  productId,
+  sellerUserId,
+) {
+  const query = new URLSearchParams({
+    seller_user_id: String(sellerUserId),
   });
+
+  return request(
+    `/products/${productId}?${query.toString()}`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
+export function restoreProduct(
+  productId,
+  sellerUserId,
+) {
+  const query = new URLSearchParams({
+    seller_user_id: String(sellerUserId),
+  });
+
+  return request(
+    `/products/${productId}/restore?${query.toString()}`,
+    {
+      method: "PATCH",
+    },
+  );
 }
 
 export function getProductVariants(productId) {
-  return request(`/products/${productId}/variants`);
+  return request(
+    `/products/${productId}/variants`,
+  );
 }
 
-export function createProductVariant(productId, variant) {
-  return request(`/products/${productId}/variants`, {
-    method: "POST",
-    body: JSON.stringify(variant),
-  });
+export function createProductVariant(
+  productId,
+  variant,
+) {
+  return request(
+    `/products/${productId}/variants`,
+    {
+      method: "POST",
+      body: JSON.stringify(variant),
+    },
+  );
 }
 
-export function updateProductVariant(productId, variantId, variant) {
-  return request(`/products/${productId}/variants/${variantId}`, {
-    method: "PUT",
-    body: JSON.stringify(variant),
-  });
+export function updateProductVariant(
+  productId,
+  variantId,
+  variant,
+) {
+  return request(
+    `/products/${productId}/variants/${variantId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(variant),
+    },
+  );
 }
 
-export function deleteProductVariant(productId, variantId) {
-  return request(`/products/${productId}/variants/${variantId}`, {
-    method: "DELETE",
-  });
+export function deleteProductVariant(
+  productId,
+  variantId,
+) {
+  return request(
+    `/products/${productId}/variants/${variantId}`,
+    {
+      method: "DELETE",
+    },
+  );
 }
 
 export function getProductInventory(productId) {
-  return request(`/products/${productId}/inventory`);
+  return request(
+    `/products/${productId}/inventory`,
+  );
 }
 
 export function updateProductInventory(
   productId,
   inventoryId,
   inventory,
+  sellerUserId,
 ) {
+  const query = new URLSearchParams({
+    seller_user_id: String(sellerUserId),
+  });
+
   return request(
-    `/products/${productId}/inventory/${inventoryId}`,
+    `/products/${productId}/inventory/${inventoryId}?${query.toString()}`,
     {
       method: "PUT",
       body: JSON.stringify(inventory),
+    },
+  );
+}
+
+// 상품 이미지 목록 조회
+export function getProductImages(productId) {
+  return request(
+    `/products/${productId}/images`,
+  );
+}
+
+// 상품 이미지 등록
+export function createProductImage(
+  productId,
+  image,
+) {
+  return request(
+    `/products/${productId}/images`,
+    {
+      method: "POST",
+      body: JSON.stringify(image),
+    },
+  );
+}
+
+// 상품 이미지 수정
+export function updateProductImage(
+  productId,
+  productImageId,
+  image,
+) {
+  return request(
+    `/products/${productId}/images/${productImageId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(image),
+    },
+  );
+}
+
+// 상품 이미지 삭제
+export function deleteProductImage(
+  productId,
+  productImageId,
+) {
+  return request(
+    `/products/${productId}/images/${productImageId}`,
+    {
+      method: "DELETE",
     },
   );
 }

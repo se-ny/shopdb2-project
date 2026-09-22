@@ -58,6 +58,7 @@ def get_product_detail_data(product_id: int) -> dict | None:
                 "stock_quantity": row["stock_quantity"],
                 "reserved_quantity": row["reserved_quantity"],
                 "safety_stock": row["safety_stock"],
+                "available_quantity": row["available_quantity"],
             }
         )
 

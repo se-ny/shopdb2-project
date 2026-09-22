@@ -25,3 +25,10 @@ Thumbs.db
 
 # Logs
 *.log
+# Local database backups
+backup/
+
+# Generated manual test evidence
+backend/tests_manual/evidence/
+
+celerybeat-schedule*

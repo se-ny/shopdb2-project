@@ -1,0 +1,146 @@
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+.admin-sidebar {
+  width: 200px;
+  background: #1f2937;
+  color: white;
+  padding: 20px;
+}
+.admin-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+.admin-sidebar a {
+  color: #d1d5db;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+.admin-sidebar a.active,
+.admin-sidebar a:hover {
+  background: #374151;
+  color: white;
+}
+.admin-content {
+  flex: 1;
+  padding: 24px;
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+}
+.admin-table th,
+.admin-table td {
+  border: 1px solid #e5e7eb;
+  padding: 8px 12px;
+  text-align: left;
+}
+.admin-table th {
+  background: #f9fafb;
+}
+.role-badge {
+  display: inline-block;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-right: 4px;
+}
+.policy-section-title {
+  margin-top: 32px;
+  margin-bottom: 8px;
+  font-size: 18px;
+  color: #374151;
+}
+.rag-query-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.rag-query-form input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+.rag-query-form select,
+.rag-query-form button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+}
+.rag-query-form button {
+  background: #1f2937;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+.rag-query-form button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+.rag-answer-box {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+}
+.rag-answer-text {
+  font-size: 15px;
+  color: #14532d;
+  margin-bottom: 8px;
+}
+.rag-answer-meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+.admin-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.admin-form {
+  max-width: 480px;
+  margin: 16px 0;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.admin-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: #374151;
+}
+.admin-form input,
+.admin-form select {
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+.admin-form-actions {
+  display: flex;
+  gap: 8px;
+}
+.admin-table td button {
+  margin-right: 4px;
+}
+.admin-form textarea {
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-family: inherit;
+  resize: vertical;
+}
